@@ -3,6 +3,8 @@
     "project": "VolumetricLight.csproj",
     "test-runner": "mtp",
     "coverage-analysis": "off",
+    "concurrency": 4,
+    "additional-timeout": 30000,
     "mutate": [
       "**/*.cs",
       "!**/YMM4-GitHubUpdateNotifier/**",
