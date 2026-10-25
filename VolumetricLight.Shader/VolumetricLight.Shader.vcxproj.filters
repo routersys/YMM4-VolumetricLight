@@ -19,4 +19,9 @@
       <Filter>ソース ファイル</Filter>
     </FxCompile>
   </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="Shaft.hlsl">
+      <Filter>ソース ファイル</Filter>
+    </FxCompile>
+  </ItemGroup>
 </Project>

@@ -18,10 +18,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Resource Include="$(ShaderDirPath)Emission.cso" Link="Resources\Shader\Emission.cso" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<Reference Include="Newtonsoft.Json">
 			<HintPath>$(YMM4DirPath)Newtonsoft.Json.dll</HintPath>
 			<Private>false</Private>
@@ -62,6 +58,11 @@
 			<HintPath>$(YMM4DirPath)YukkuriMovieMaker.Plugin.dll</HintPath>
 			<Private>false</Private>
 		</Reference>
+	</ItemGroup>
+
+	<ItemGroup>
+		<Resource Include="$(ShaderDirPath)Emission.cso" Link="Resources\Shader\Emission.cso" />
+		<Resource Include="$(ShaderDirPath)Shaft.cso" Link="Resources\Shader\Shaft.cso" />
 	</ItemGroup>
 
 	<ItemGroup>
