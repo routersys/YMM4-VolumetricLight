@@ -69,11 +69,12 @@ internal sealed class HarnessRenderer : IDisposable
 
     public string Driver { get; }
 
-    public byte[][] Render(IVideoEffect effect, IReadOnlyList<int> frames, HarnessPose? pose = null)
+    public byte[][] Render(IVideoEffect effect, IReadOnlyList<int> frames, HarnessPose? pose = null, IReadOnlyList<HarnessOccluder>? occluders = null)
     {
         if (frames.Count == 0)
             throw new ArgumentException("フレームを 1 つ以上指定してください。", nameof(frames));
 
+        using var scene = new HarnessOccluderScene(context, occluders ?? []);
         using var processor = effect.CreateVideoEffect(context);
         processor.SetInput(centered);
         try
@@ -81,8 +82,9 @@ internal sealed class HarnessRenderer : IDisposable
             var rendered = new byte[frames.Count][];
             for (var index = 0; index < frames.Count; index++)
             {
+                scene.Update(Describe, frames[index]);
                 processor.Update(Describe(frames[index], pose));
-                rendered[index] = Capture(processor.Output);
+                rendered[index] = Capture(processor.Output, scene.Layers);
             }
 
             return rendered;
@@ -184,9 +186,9 @@ internal sealed class HarnessRenderer : IDisposable
         }
     }
 
-    byte[] Capture(ID2D1Image output)
+    byte[] Capture(ID2D1Image output, IEnumerable<ID2D1Image>? overlays = null)
     {
-        Submit(output);
+        Submit(output, overlays);
         readback.CopyFromBitmap(target);
 
         var stride = CanvasWidth * HarnessImage.BytesPerPixel;
@@ -205,13 +207,16 @@ internal sealed class HarnessRenderer : IDisposable
         return pixels;
     }
 
-    void Submit(ID2D1Image output)
+    void Submit(ID2D1Image output, IEnumerable<ID2D1Image>? overlays = null)
     {
         var deviceContext = context.DeviceContext;
+        var origin = new Vector2(CanvasWidth * 0.5f, CanvasHeight * 0.5f);
         deviceContext.Target = target;
         deviceContext.BeginDraw();
         deviceContext.Clear(Backdrop);
-        deviceContext.DrawImage(output, new Vector2(CanvasWidth * 0.5f, CanvasHeight * 0.5f), null, InterpolationMode.NearestNeighbor, CompositeMode.SourceOver);
+        deviceContext.DrawImage(output, origin, null, InterpolationMode.NearestNeighbor, CompositeMode.SourceOver);
+        foreach (var overlay in overlays ?? [])
+            deviceContext.DrawImage(overlay, origin, null, InterpolationMode.NearestNeighbor, CompositeMode.SourceOver);
         deviceContext.EndDraw();
         deviceContext.Target = null;
     }
@@ -223,7 +228,7 @@ internal sealed class HarnessRenderer : IDisposable
         sync.Unmap();
     }
 
-    EffectDescription Describe(int frame, HarnessPose? pose)
+    internal EffectDescription Describe(int frame, HarnessPose? pose)
     {
         var timeline = new TimelineSourceDescription(
             new System.Drawing.Size(CanvasWidth, CanvasHeight),
@@ -242,7 +247,7 @@ internal sealed class HarnessRenderer : IDisposable
         return new EffectDescription(item, draw, 0, 1, 0, 1);
     }
 
-    static ID2D1Bitmap1 CreateBitmap(ID2D1DeviceContext6 deviceContext, int width, int height, BitmapOptions options)
+    internal static ID2D1Bitmap1 CreateBitmap(ID2D1DeviceContext6 deviceContext, int width, int height, BitmapOptions options)
         => deviceContext.CreateBitmap(
             new SizeI(width, height), nint.Zero, width * HarnessImage.BytesPerPixel,
             new BitmapProperties1(PixelFormat, Dpi, Dpi, options));

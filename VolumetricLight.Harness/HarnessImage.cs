@@ -16,6 +16,12 @@ internal sealed record HarnessImage(int Width, int Height, byte[] Pixels, string
         return new HarnessImage(width, height, pixels, $"synthetic {width}x{height} {Convert.ToHexString(SHA256.HashData(pixels))[..KeyLength]}", null);
     }
 
+    public static HarnessImage Silhouette(int width, int height)
+    {
+        var pixels = SyntheticImage.CreateSilhouette(width, height);
+        return new HarnessImage(width, height, pixels, $"silhouette {width}x{height} {Convert.ToHexString(SHA256.HashData(pixels))[..KeyLength]}", null);
+    }
+
     public static HarnessImage Load(string path)
     {
         if (!File.Exists(path))

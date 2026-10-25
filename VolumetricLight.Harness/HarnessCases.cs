@@ -61,13 +61,50 @@ internal static class HarnessCases
         yield return ("pose-rotated-y-converging", Create(effect => effect.Spread.Values[0].Value = -25), [0], RotatedY);
     }
 
+    static readonly HarnessImage FigureImage = HarnessImage.Silhouette(360, 540);
+
+    static HarnessOccluder Figure(Vector3 draw, Vector3? rotation = null, Action<VolumetricLightOccluderEffect>? configure = null)
+    {
+        var effect = new VolumetricLightOccluderEffect();
+        configure?.Invoke(effect);
+        return new HarnessOccluder(effect, HarnessPose.Flat with { Draw = draw, Rotation = rotation ?? Vector3.Zero }, FigureImage);
+    }
+
+    static VolumetricLightEffect Shadowed(Action<VolumetricLightEffect>? configure = null)
+        => Create(effect =>
+        {
+            effect.OcclusionChannel = 1;
+            effect.Intensity.Values[0].Value = 250;
+            configure?.Invoke(effect);
+        });
+
+    public static IEnumerable<(string Name, VolumetricLightEffect Effect, IReadOnlyList<int> Frames, HarnessPose Pose, IReadOnlyList<HarnessOccluder> Occluders)> Everything()
+    {
+        foreach (var (name, effect, frames, pose) in All())
+            yield return (name, effect, frames, pose, []);
+        foreach (var item in Shadows())
+            yield return item;
+    }
+
+    public static IEnumerable<(string Name, VolumetricLightEffect Effect, IReadOnlyList<int> Frames, HarnessPose Pose, IReadOnlyList<HarnessOccluder> Occluders)> Shadows()
+    {
+        yield return ("shadow-figure", Shadowed(effect => { effect.Direction.Values[0].Value = -60; effect.Elevation.Values[0].Value = 45; }), [0], HarnessPose.Flat, [Figure(new Vector3(-120f, 110f, 240f))]);
+        yield return ("shadow-figure-default-light", Shadowed(), [0], HarnessPose.Flat, [Figure(new Vector3(0f, 120f, 200f))]);
+        yield return ("shadow-figure-point-light", Shadowed(effect => effect.Spread.Values[0].Value = 25), [0], HarnessPose.Flat, [Figure(new Vector3(60f, 110f, 220f))]);
+        yield return ("shadow-two-figures", Shadowed(effect => effect.Direction.Values[0].Value = -70), [0], HarnessPose.Flat, [Figure(new Vector3(-220f, 130f, 160f)), Figure(new Vector3(200f, 110f, 300f), new Vector3(0f, -15f, 0f))]);
+        yield return ("shadow-figure-half-strength", Shadowed(effect => effect.Direction.Values[0].Value = -60), [0], HarnessPose.Flat, [Figure(new Vector3(-120f, 110f, 240f), configure: effect => effect.Strength.Values[0].Value = 50)]);
+        yield return ("shadow-figure-strength-animated-frames", Shadowed(effect => effect.Direction.Values[0].Value = -60), [0, 150, 299], HarnessPose.Flat, [Figure(new Vector3(-120f, 110f, 240f), configure: effect => effect.Strength.CopyFrom(Linear(100d, 10d)))]);
+        yield return ("shadow-figure-rotated-light", Shadowed(), [0], RotatedY, [Figure(new Vector3(0f, 120f, 200f))]);
+        yield return ("shadow-figure-other-number", Shadowed(effect => { effect.Direction.Values[0].Value = -60; effect.Elevation.Values[0].Value = 45; }), [0], HarnessPose.Flat, [Figure(new Vector3(-120f, 110f, 240f), configure: effect => effect.Channel = 2)]);
+    }
+
     public static IEnumerable<(string Name, Func<VolumetricLightEffect> Create, Action<VolumetricLightEffect> Change, int Frame, HarnessPose Pose)> Transitions()
     {
         yield return ("direction-minus-90-to-0", () => Create(), effect => effect.Direction.Values[0].Value = 0, 0, HarnessPose.Flat);
         yield return ("elevation-35-to-60", () => Create(), effect => effect.Elevation.Values[0].Value = 60, 0, HarnessPose.Flat);
         yield return ("spread-12-to-minus-20", () => Create(), effect => effect.Spread.Values[0].Value = -20, 0, HarnessPose.Flat);
         yield return ("length-1200-to-500", () => Create(), effect => effect.Length.Values[0].Value = 500, 0, HarnessPose.Flat);
-        yield return ("intensity-100-to-30", () => Create(), effect => effect.Intensity.Values[0].Value = 30, 0, HarnessPose.Flat);
+        yield return ("intensity-150-to-30", () => Create(), effect => effect.Intensity.Values[0].Value = 30, 0, HarnessPose.Flat);
         yield return ("threshold-25-to-70", () => Create(), effect => effect.Threshold.Values[0].Value = 70, 0, HarnessPose.Flat);
         yield return ("threshold-70-to-10", () => Create(effect => effect.Threshold.Values[0].Value = 70), effect => effect.Threshold.Values[0].Value = 10, 0, HarnessPose.Flat);
         yield return ("tint-white-to-blue", () => Create(), effect => effect.Tint = System.Windows.Media.Color.FromRgb(90, 140, 255), 0, HarnessPose.Flat);

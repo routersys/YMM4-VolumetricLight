@@ -173,18 +173,18 @@ static int Transition(HarnessRenderer renderer, string outputDirectory)
         Console.Error.WriteLine($"{name}: {difference}。設定を変えた後の描画が作り直した場合と違います。-> {outputDirectory}");
     }
 
-    if (!HarnessCases.Transitions().Any() && !HarnessCases.All().Any(item => item.Frames.Count > 1))
+    if (!HarnessCases.Transitions().Any() && !HarnessCases.Everything().Any(item => item.Frames.Count > 1))
         Console.Error.WriteLine("ケースがありません。HarnessCases に書き足してください。");
 
-    foreach (var (name, effect, frames, pose) in HarnessCases.All())
+    foreach (var (name, effect, frames, pose, occluders) in HarnessCases.Everything())
     {
         if (frames.Count < 2)
             continue;
 
-        var sequential = renderer.Render(effect, frames, pose);
+        var sequential = renderer.Render(effect, frames, pose, occluders);
         for (var index = 0; index < frames.Count; index++)
         {
-            var fresh = renderer.Render(effect, [frames[index]], pose)[0];
+            var fresh = renderer.Render(effect, [frames[index]], pose, occluders)[0];
             var difference = ImageComparison.Of(fresh, sequential[index], renderer.CanvasWidth, renderer.CanvasHeight);
             var label = $"{name}-f{frames[index]:D3}";
             if (difference.IsEmpty)
@@ -276,14 +276,14 @@ static List<GoldenCase> Evaluate(HarnessRenderer renderer, string? caseFilter, A
 {
     var cases = new List<GoldenCase>();
     var names = new HashSet<string>(StringComparer.Ordinal);
-    foreach (var (name, effect, frames, pose) in HarnessCases.All())
+    foreach (var (name, effect, frames, pose, occluders) in HarnessCases.Everything())
     {
         if (!names.Add(name))
             throw new HarnessException($"ケース名が重複しています。{name}");
         if (caseFilter is not null && !name.Contains(caseFilter, StringComparison.Ordinal))
             continue;
 
-        var rendered = renderer.Render(effect, frames, pose);
+        var rendered = renderer.Render(effect, frames, pose, occluders);
         var files = new string[frames.Count];
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         for (var index = 0; index < frames.Count; index++)

@@ -64,6 +64,63 @@ internal static class SyntheticImage
         return pixels;
     }
 
+    const float SilhouetteLevel = 0.02f;
+    const float HeadRadiusFraction = 0.13f;
+    const float HeadCenterFraction = 0.2f;
+    const float NeckHalfWidthFraction = 0.09f;
+    const float ShoulderTopFraction = 0.36f;
+    const float ShoulderHalfWidthFraction = 0.46f;
+    const float BodyHalfWidthFraction = 0.34f;
+    const float ShoulderRoundFraction = 0.12f;
+
+    public static byte[] CreateSilhouette(int width, int height)
+    {
+        var pixels = new byte[width * height * HarnessImage.BytesPerPixel];
+        for (var y = 0; y < height; y++)
+        {
+            for (var x = 0; x < width; x++)
+            {
+                var covered = 0;
+                for (var sy = 0; sy < Samples; sy++)
+                {
+                    for (var sx = 0; sx < Samples; sx++)
+                    {
+                        if (InsideSilhouette((x + (sx + 0.5f) / Samples) / width, (y + (sy + 0.5f) / Samples) / height, height / (float)width))
+                            covered++;
+                    }
+                }
+
+                var alpha = covered / (float)(Samples * Samples);
+                var offset = (y * width + x) * HarnessImage.BytesPerPixel;
+                pixels[offset] = ToByte(SilhouetteLevel * alpha);
+                pixels[offset + 1] = ToByte(SilhouetteLevel * alpha);
+                pixels[offset + 2] = ToByte(SilhouetteLevel * alpha);
+                pixels[offset + 3] = ToByte(alpha);
+            }
+        }
+
+        return pixels;
+    }
+
+    static bool InsideSilhouette(float u, float v, float aspect)
+    {
+        var dx = u - 0.5f;
+        var headDy = (v - HeadCenterFraction) * aspect;
+        if (dx * dx + headDy * headDy < HeadRadiusFraction * HeadRadiusFraction)
+            return true;
+
+        if (v > HeadCenterFraction && v < ShoulderTopFraction && MathF.Abs(dx) < NeckHalfWidthFraction)
+            return true;
+
+        if (v < ShoulderTopFraction)
+            return false;
+
+        var halfWidth = v < ShoulderTopFraction + ShoulderRoundFraction
+            ? NeckHalfWidthFraction + (ShoulderHalfWidthFraction - NeckHalfWidthFraction) * MathF.Sqrt(1f - MathF.Pow(1f - (v - ShoulderTopFraction) / ShoulderRoundFraction, 2f))
+            : BodyHalfWidthFraction + (ShoulderHalfWidthFraction - BodyHalfWidthFraction) * Math.Max(0f, 1f - (v - ShoulderTopFraction - ShoulderRoundFraction) * 6f);
+        return MathF.Abs(dx) < halfWidth;
+    }
+
     static (float Red, float Green, float Blue) Shade(float x, float y, int width, int height, float lead)
     {
         for (var index = 0; index < Windows.Length; index++)
