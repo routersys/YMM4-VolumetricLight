@@ -364,3 +364,6 @@ FodyWeavers.xsd
 
 # YukkuriMovieMaker.Generator
 *.resx
+
+# Stryker.NET
+StrykerOutput/

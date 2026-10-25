@@ -1,0 +1,19 @@
+{
+  "stryker-config": {
+    "project": "VolumetricLight.csproj",
+    "test-runner": "mtp",
+    "coverage-analysis": "off",
+    "mutate": [
+      "**/*.cs",
+      "!**/YMM4-GitHubUpdateNotifier/**",
+      "!**/YMM4-Telemetry/**",
+      "!**/VolumetricLightTelemetry.cs",
+      "!**/VolumetricLightUpdateNotifier.cs"
+    ],
+    "reporters": [
+      "progress",
+      "cleartext",
+      "html"
+    ]
+  }
+}
