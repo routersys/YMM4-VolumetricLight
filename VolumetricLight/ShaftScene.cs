@@ -41,7 +41,8 @@ internal readonly record struct ShaftConstants(
     Vector4 Wind,
     Vector4 Mode,
     Vector4 Fade,
-    Vector4 OutputBounds);
+    Vector4 OutputBounds,
+    Matrix4x4 CameraFromLocal);
 
 internal readonly record struct ShaftScene(ShaftConstants Constants, float Scale, ScreenRect Canvas, ScreenRect Shaft, ViewTransform View, LightVolume Volume)
 {
@@ -96,7 +97,8 @@ internal readonly record struct ShaftScene(ShaftConstants Constants, float Scale
             new Vector4((float)(Math.Cos(windAngle) * windOffset), (float)(-Math.Sin(windAngle) * windOffset), 0f, 0f),
             new Vector4(VolumetricLightSettings.MinimumSteps, DustTapsPerCell, 1f / limits.ResolutionScale, 0f),
             VolumetricLightSettings.GetFade(parameters.Falloff, length),
-            shaft.ToVector());
+            shaft.ToVector(),
+            view.CameraFromLocal);
         scene = new ShaftScene(constants, limits.ResolutionScale, canvas, shaft, view, volume);
         return true;
     }

@@ -224,6 +224,17 @@ internal sealed class VolumetricLightEffectProcessor(IGraphicsDevicesAndContext 
         disposer.Collect(shaft);
 
         var context = devices.DeviceContext;
+        var flood = new Flood(context) { Color = Vector4.Zero };
+        var emptyCrop = new Crop(context) { Rectangle = Vector4.Zero };
+        disposer.Collect(flood);
+        disposer.Collect(emptyCrop);
+        using (var floodOutput = flood.Output)
+            emptyCrop.SetInput(0, floodOutput, true);
+        _emptyOutput = emptyCrop.Output;
+        disposer.Collect(_emptyOutput);
+        for (var slot = 0; slot < VolumetricLightSettings.OccluderCapacity; slot++)
+            shaft.SetInput(VolumetricLightSettings.GoboLevelCount + slot, _emptyOutput, true);
+
         var previous = emission.Output;
         disposer.Collect(previous);
         shaft.SetInput(0, previous, true);
@@ -269,15 +280,6 @@ internal sealed class VolumetricLightEffectProcessor(IGraphicsDevicesAndContext 
         _renderOutput = _render.Output;
         disposer.Collect(_renderOutput);
 
-        var flood = new Flood(context) { Color = Vector4.Zero };
-        var emptyCrop = new Crop(context) { Rectangle = Vector4.Zero };
-        disposer.Collect(flood);
-        disposer.Collect(emptyCrop);
-        using (var floodOutput = flood.Output)
-            emptyCrop.SetInput(0, floodOutput, true);
-        _emptyOutput = emptyCrop.Output;
-        disposer.Collect(_emptyOutput);
-
         _composite = new Composite(context) { InputCount = 2, Mode = CompositeMode.Plus };
         _composite.SetValue((int)Property.Precision, BufferPrecision.PerChannel16Float);
         disposer.Collect(_composite);
@@ -318,7 +320,7 @@ internal sealed class VolumetricLightEffectProcessor(IGraphicsDevicesAndContext 
                 level?.SetInput(0, null, true);
             if (_shaft is { } shaft)
             {
-                for (var index = 0; index < VolumetricLightSettings.GoboLevelCount; index++)
+                for (var index = 0; index < VolumetricLightSettings.GoboLevelCount + VolumetricLightSettings.OccluderCapacity; index++)
                     shaft.SetInput(index, null, true);
             }
 

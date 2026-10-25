@@ -4,12 +4,20 @@ Texture2D Level2 : register(t2);
 Texture2D Level3 : register(t3);
 Texture2D Level4 : register(t4);
 Texture2D Level5 : register(t5);
+Texture2D Occluder0 : register(t6);
+Texture2D Occluder1 : register(t7);
+Texture2D Occluder2 : register(t8);
+Texture2D Occluder3 : register(t9);
 SamplerState Sampler0 : register(s0);
 SamplerState Sampler1 : register(s1);
 SamplerState Sampler2 : register(s2);
 SamplerState Sampler3 : register(s3);
 SamplerState Sampler4 : register(s4);
 SamplerState Sampler5 : register(s5);
+SamplerState Sampler6 : register(s6);
+SamplerState Sampler7 : register(s7);
+SamplerState Sampler8 : register(s8);
+SamplerState Sampler9 : register(s9);
 
 cbuffer Constants : register(b0)
 {
@@ -26,6 +34,10 @@ cbuffer Constants : register(b0)
     float4 wind : packoffset(c18);
     float4 mode : packoffset(c19);
     float4 fade : packoffset(c20);
+    float4 occluderPlanes[4] : packoffset(c21);
+    float4 occluderImageX[4] : packoffset(c25);
+    float4 occluderImageY[4] : packoffset(c29);
+    float4 occluderStrength : packoffset(c33);
 };
 
 static const int MaximumLevel = 5;
@@ -38,6 +50,7 @@ static const float DustSecondWeight = 0.5;
 static const float LinearFalloffLevel = 0.9999;
 
 static float4 SceneUv[6];
+static float4 OccluderUv[4];
 static float2 ScenePoint;
 
 uint Mix(uint value)
@@ -106,6 +119,50 @@ float4 ReadLevel(int level, float2 imagePosition)
     return Level5.SampleLevel(Sampler5, uv, 0);
 }
 
+float OccluderAlpha(int index, float2 imagePosition)
+{
+    float4 uvs = OccluderUv[index];
+    float2 uv = uvs.xy + (imagePosition - ScenePoint) * uvs.zw;
+    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0)
+        return 0.0;
+
+    if (index == 0)
+        return Occluder0.SampleLevel(Sampler6, uv, 0).a;
+    if (index == 1)
+        return Occluder1.SampleLevel(Sampler7, uv, 0).a;
+    if (index == 2)
+        return Occluder2.SampleLevel(Sampler8, uv, 0).a;
+    return Occluder3.SampleLevel(Sampler9, uv, 0).a;
+}
+
+float GetTransmission(float3 volumePoint, float3 sourcePoint)
+{
+    float transmission = 1.0;
+    [unroll]
+    for (int index = 0; index < 4; ++index)
+    {
+        float strength = occluderStrength[index];
+        if (strength > 0.0)
+        {
+            float4 plane = occluderPlanes[index];
+            float near = dot(plane.xyz, volumePoint) + plane.w;
+            float span = dot(plane.xyz, sourcePoint) + plane.w - near;
+            if (abs(span) > RateEpsilon)
+            {
+                float ratio = -near / span;
+                if (ratio > 0.0 && ratio < 1.0)
+                {
+                    float4 crossing = float4(volumePoint + (sourcePoint - volumePoint) * ratio, 1.0);
+                    float2 imagePosition = float2(dot(occluderImageX[index], crossing), dot(occluderImageY[index], crossing));
+                    transmission *= 1.0 - strength * OccluderAlpha(index, imagePosition);
+                }
+            }
+        }
+    }
+
+    return transmission;
+}
+
 float4 SampleGobo(float2 imagePosition, float lod)
 {
     float clamped = clamp(lod, 0.0, (float)MaximumLevel);
@@ -170,7 +227,11 @@ float4 main(
     float4 uv2 : TEXCOORD2,
     float4 uv3 : TEXCOORD3,
     float4 uv4 : TEXCOORD4,
-    float4 uv5 : TEXCOORD5
+    float4 uv5 : TEXCOORD5,
+    float4 uv6 : TEXCOORD6,
+    float4 uv7 : TEXCOORD7,
+    float4 uv8 : TEXCOORD8,
+    float4 uv9 : TEXCOORD9
 ) : SV_TARGET
 {
     SceneUv[0] = uv0;
@@ -179,6 +240,10 @@ float4 main(
     SceneUv[3] = uv3;
     SceneUv[4] = uv4;
     SceneUv[5] = uv5;
+    OccluderUv[0] = uv6;
+    OccluderUv[1] = uv7;
+    OccluderUv[2] = uv8;
+    OccluderUv[3] = uv9;
     ScenePoint = scenePosition.xy;
 
     float footprint = mode.z;
@@ -256,7 +321,8 @@ float4 main(
         if (dust.x > 0.0)
             density = max(1.0 + dust.x * (2.0 * Dust((volumePoint + wind.xyz) * dust.y, seed) - 1.0), 0.0);
 
-        sum += emission * (GetFalloff(travel) * phase * density);
+        float transmission = occluderStrength.x + occluderStrength.y + occluderStrength.z + occluderStrength.w > 0.0 ? GetTransmission(volumePoint, sourcePoint) : 1.0;
+        sum += emission * (GetFalloff(travel) * phase * density * transmission);
     }
 
     return float4(sum * stepWeight * tint.rgb, 0.0);

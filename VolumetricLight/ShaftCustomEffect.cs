@@ -36,6 +36,9 @@ internal sealed class ShaftCustomEffect : D2D1CustomShaderEffectBase
         Mode,
         Fade,
         OutputBounds,
+        CameraFromLocal,
+        Link,
+        Revision,
     }
 
     public Matrix4x4 LocalFromCamera { set => SetValue((int)PropertyIndex.LocalFromCamera, value); }
@@ -57,6 +60,9 @@ internal sealed class ShaftCustomEffect : D2D1CustomShaderEffectBase
     public Vector4 Mode { set => SetValue((int)PropertyIndex.Mode, value); }
     public Vector4 Fade { set => SetValue((int)PropertyIndex.Fade, value); }
     public Vector4 OutputBounds { set => SetValue((int)PropertyIndex.OutputBounds, value); }
+    public Matrix4x4 CameraFromLocal { set => SetValue((int)PropertyIndex.CameraFromLocal, value); }
+    public int Link { set => SetValue((int)PropertyIndex.Link, value); }
+    public int Revision { set => SetValue((int)PropertyIndex.Revision, value); }
 
     public void Apply(in ShaftConstants next, in ShaftConstants last, bool force)
     {
@@ -98,15 +104,20 @@ internal sealed class ShaftCustomEffect : D2D1CustomShaderEffectBase
             Fade = next.Fade;
         if (force || last.OutputBounds != next.OutputBounds)
             OutputBounds = next.OutputBounds;
+        if (force || last.CameraFromLocal != next.CameraFromLocal)
+            CameraFromLocal = next.CameraFromLocal;
     }
 
-    [CustomEffect(VolumetricLightSettings.GoboLevelCount)]
+    [CustomEffect(VolumetricLightSettings.GoboLevelCount + VolumetricLightSettings.OccluderCapacity)]
     internal sealed class EffectImpl : D2D1CustomShaderEffectImplBase<EffectImpl>
     {
         private ConstantBuffer _cb;
         private Vector4 _outputBounds;
         private RawRect _outputRect;
-        private readonly RawRect[] _levelRects = new RawRect[VolumetricLightSettings.GoboLevelCount];
+        private readonly RawRect[] _inputRects = new RawRect[VolumetricLightSettings.GoboLevelCount + VolumetricLightSettings.OccluderCapacity];
+        private Matrix4x4 _cameraFromLocal = Matrix4x4.Identity;
+        private int _link;
+        private int _revision;
 
         [CustomEffectProperty(PropertyType.Matrix4x4, (int)PropertyIndex.LocalFromCamera)]
         public Matrix4x4 LocalFromCamera { get => _cb.LocalFromCamera; set { _cb.LocalFromCamera = ViewTransform.IsFinite(value) ? value : default; UpdateConstants(); } }
@@ -177,6 +188,15 @@ internal sealed class ShaftCustomEffect : D2D1CustomShaderEffectBase
             }
         }
 
+        [CustomEffectProperty(PropertyType.Matrix4x4, (int)PropertyIndex.CameraFromLocal)]
+        public Matrix4x4 CameraFromLocal { get => _cameraFromLocal; set { _cameraFromLocal = ViewTransform.IsFinite(value) ? value : Matrix4x4.Identity; UpdateConstants(); } }
+
+        [CustomEffectProperty(PropertyType.Int32, (int)PropertyIndex.Link)]
+        public int Link { get => _link; set { _link = value; UpdateConstants(); } }
+
+        [CustomEffectProperty(PropertyType.Int32, (int)PropertyIndex.Revision)]
+        public int Revision { get => _revision; set { _revision = value; UpdateConstants(); } }
+
         public EffectImpl() : base(ShaderResourceUri.Get("Shaft"))
         {
         }
@@ -191,6 +211,7 @@ internal sealed class ShaftCustomEffect : D2D1CustomShaderEffectBase
 
             try
             {
+                ResolveOccluders();
                 drawInformation.SetPixelShaderConstantBuffer(_cb);
             }
             catch (Exception exception)
@@ -200,24 +221,47 @@ internal sealed class ShaftCustomEffect : D2D1CustomShaderEffectBase
             }
         }
 
+        private void ResolveOccluders()
+        {
+            _cb.OccluderStrength = default;
+            if (!OccluderLinks.TryGet(_link, out var link) || link.Group is not { } group)
+                return;
+
+            Span<Occluder> occluders = stackalloc Occluder[VolumetricLightSettings.OccluderCapacity];
+            Span<float> strengths = stackalloc float[VolumetricLightSettings.OccluderCapacity];
+            group.Snapshot(occluders);
+            for (var index = 0; index < occluders.Length; index++)
+            {
+                var plane = OccluderPlane.Create(_cameraFromLocal, occluders[index]);
+                _cb.OccluderPlanes[index] = plane.Plane;
+                _cb.OccluderImageX[index] = plane.ImageX;
+                _cb.OccluderImageY[index] = plane.ImageY;
+                strengths[index] = plane.Strength;
+            }
+
+            _cb.OccluderStrength = new Vector4(strengths[0], strengths[1], strengths[2], strengths[3]);
+        }
+
         public override void MapInputRectsToOutputRect(
             RawRect[] inputRects,
             RawRect[] inputOpaqueSubRects,
             out RawRect outputRect,
             out RawRect outputOpaqueSubRect)
         {
-            for (var index = 0; index < _levelRects.Length; index++)
-                _levelRects[index] = inputRects[index];
+            for (var index = 0; index < _inputRects.Length; index++)
+                _inputRects[index] = inputRects[index];
             outputRect = _outputRect;
             outputOpaqueSubRect = default;
         }
 
         public override void MapOutputRectToInputRects(RawRect outputRect, RawRect[] inputRects)
         {
-            for (var index = 0; index < _levelRects.Length; index++)
+            for (var index = 0; index < _inputRects.Length; index++)
             {
-                var rect = _levelRects[index];
-                inputRects[index] = new RawRect(rect.Left - 1, rect.Top - 1, rect.Right + 1, rect.Bottom + 1);
+                var rect = _inputRects[index];
+                inputRects[index] = rect.Right > rect.Left && rect.Bottom > rect.Top
+                    ? new RawRect(rect.Left - 1, rect.Top - 1, rect.Right + 1, rect.Bottom + 1)
+                    : rect;
             }
         }
 
@@ -240,6 +284,10 @@ internal sealed class ShaftCustomEffect : D2D1CustomShaderEffectBase
             public Vector4 Wind;
             public Vector4 Mode;
             public Vector4 Fade;
+            public OccluderPlaneSet OccluderPlanes;
+            public OccluderPlaneSet OccluderImageX;
+            public OccluderPlaneSet OccluderImageY;
+            public Vector4 OccluderStrength;
         }
     }
 }

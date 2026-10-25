@@ -18,6 +18,11 @@ internal sealed class GoboPyramid
     readonly int[] heights = new int[VolumetricLightSettings.GoboLevelCount];
 
     public GoboPyramid(int width, int height, Func<int, int, Vector3> emission)
+        : this(width, height, (x, y) => new Vector4(emission(x, y), MaximumAlpha))
+    {
+    }
+
+    public GoboPyramid(int width, int height, Func<int, int, Vector4> texel)
     {
         widths[0] = width;
         heights[0] = height;
@@ -26,12 +31,12 @@ internal sealed class GoboPyramid
         {
             for (var x = 0; x < width; x++)
             {
-                var value = emission(x, y);
+                var value = texel(x, y);
                 var offset = (y * width + x) * Channels;
                 levels[0][offset] = value.X;
                 levels[0][offset + 1] = value.Y;
                 levels[0][offset + 2] = value.Z;
-                levels[0][offset + 3] = MaximumAlpha;
+                levels[0][offset + 3] = value.W;
             }
         }
 
@@ -103,7 +108,7 @@ internal sealed class GoboPyramid
     }
 }
 
-internal sealed class ShaftShaderModel(ShaftConstants constants, GoboPyramid pyramid)
+internal sealed class ShaftShaderModel(ShaftConstants constants, GoboPyramid pyramid, IReadOnlyList<(OccluderPlane Plane, GoboPyramid Image)>? occluders = null)
 {
     const float RateEpsilon = 1e-9f;
     const float UnitScale = 1f / 16777216f;
@@ -115,6 +120,7 @@ internal sealed class ShaftShaderModel(ShaftConstants constants, GoboPyramid pyr
 
     readonly ShaftConstants c = constants;
     readonly GoboPyramid pyramid = pyramid;
+    readonly IReadOnlyList<(OccluderPlane Plane, GoboPyramid Image)> occluders = occluders ?? [];
 
     static uint Mix(uint value)
     {
@@ -227,6 +233,39 @@ internal sealed class ShaftShaderModel(ShaftConstants constants, GoboPyramid pyr
         return blend <= 0f ? low : Vector4.Lerp(low, ReadLevel(upper, image), blend);
     }
 
+    float OccluderAlpha(GoboPyramid image, Vector2 position)
+    {
+        var u = position.X / image.Width;
+        var v = position.Y / image.Height;
+        return u < 0f || u > 1f || v < 0f || v > 1f ? 0f : image.Bilinear(0, u, v).W;
+    }
+
+    static float Dot(Vector4 row, Vector3 point) => row.X * point.X + row.Y * point.Y + row.Z * point.Z + row.W;
+
+    float GetTransmission(Vector3 volumePoint, Vector3 sourcePoint)
+    {
+        var transmission = 1f;
+        foreach (var (plane, image) in occluders)
+        {
+            if (!(plane.Strength > 0f))
+                continue;
+
+            var near = Dot(plane.Plane, volumePoint);
+            var span = Dot(plane.Plane, sourcePoint) - near;
+            if (!(MathF.Abs(span) > RateEpsilon))
+                continue;
+
+            var ratio = -near / span;
+            if (!(ratio > 0f && ratio < 1f))
+                continue;
+
+            var crossing = volumePoint + (sourcePoint - volumePoint) * ratio;
+            transmission *= 1f - plane.Strength * OccluderAlpha(image, new Vector2(Dot(plane.ImageX, crossing), Dot(plane.ImageY, crossing)));
+        }
+
+        return transmission;
+    }
+
     public Vector3 Shade(int pixelX, int pixelY)
     {
         var scene = new Vector2(pixelX + 0.5f, pixelY + 0.5f);
@@ -300,7 +339,7 @@ internal sealed class ShaftShaderModel(ShaftConstants constants, GoboPyramid pyr
             if (c.Dust.X > 0f)
                 density = MathF.Max(1f + c.Dust.X * (2f * Dust((volumePoint + wind) * c.Dust.Y, seed) - 1f), 0f);
 
-            sum += new Vector3(gobo.X, gobo.Y, gobo.Z) * (GetFalloff(travel) * phase * density);
+            sum += new Vector3(gobo.X, gobo.Y, gobo.Z) * (GetFalloff(travel) * phase * density * GetTransmission(volumePoint, sourcePoint));
         }
 
         return sum * stepWeight * new Vector3(c.Tint.X, c.Tint.Y, c.Tint.Z);
