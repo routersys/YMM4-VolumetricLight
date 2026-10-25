@@ -61,6 +61,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<Compile Include="..\YMM4-GitHubUpdateNotifier\GitHubUpdateNotifier\*.cs" LinkBase="GitHubUpdateNotifier" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<ProjectReference Include="..\YukkuriMovieMaker.Generator\YukkuriMovieMaker.Generator\YukkuriMovieMaker.Generator.csproj" SetConfiguration="Configuration=$(Configuration)" SetPlatform="Platform=AnyCPU" GlobalPropertiesToRemove="SkipPluginDeploy" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 		<AdditionalFiles Include="**/*.csv" />
 	</ItemGroup>
