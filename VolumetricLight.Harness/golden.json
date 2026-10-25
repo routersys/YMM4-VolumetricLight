@@ -9,7 +9,7 @@
       "frames": [
         0
       ],
-      "hash": "3656E2C3C62B878C077D8946C9F5ABA54EE3154B10356152FF5B40B3531D7CE8"
+      "hash": "8C7594D4CD2E86E488691FE5A613DF9CAA80DEDFD2C27587209E15E70A095B99"
     },
     {
       "name": "direction-animated-frames",
@@ -19,77 +19,77 @@
         200,
         299
       ],
-      "hash": "8C1A53AFFE50FBD597E8C00B82D72C8CB3E593F5E3E402D9CB033FC7AFA69468"
+      "hash": "77221A367FB617685BA7B685C316D8C5099C3EB7A779488ABD2354782BB0BD51"
     },
     {
       "name": "direction-0",
       "frames": [
         0
       ],
-      "hash": "C093428F8DF1E7519487C2A11FCC859232CDCFDA9E349A50E8448A9123E3FFB3"
+      "hash": "9FFC30E5745BC3D15638067AC14CAC801433D45F498927C0802A238D3D7B2FA6"
     },
     {
       "name": "direction-180",
       "frames": [
         0
       ],
-      "hash": "93E910B310C7D982BDC7A63CCC236EE6A396E34551526FFAAEC76DAED4C0ED05"
+      "hash": "CDE0A57368699F9FFF33D6DCBAA47050FFDD4E699DC67C810980B4592A6587A2"
     },
     {
       "name": "elevation-15",
       "frames": [
         0
       ],
-      "hash": "4756D7AB9388BE2DE13B1D2255640ED0D0B20C9FA476E9F86385AE3D48D7CEA3"
+      "hash": "8A7D3E7AFD8CA0527F5A6BCF5361695CC262DFC72B7BDA9B6C56BBFA9AF374D2"
     },
     {
       "name": "elevation-70",
       "frames": [
         0
       ],
-      "hash": "D44F9F81D1EBC1EA52C7CA8BF26B0419FF3930004CE4F65225B29E38D0CA9748"
+      "hash": "41A69C802D7EC73FF611299B0CA84961B4368805B2975DB7A7DCF414C282A200"
     },
     {
       "name": "elevation-minus-35",
       "frames": [
         0
       ],
-      "hash": "DB556E772A329EFDC1F183CBD5067EDB6B1953D63E97E6D95E71F8B1A9B6BB74"
+      "hash": "E0032A1E1185C048444D87CDD63FC46E99B7B143EB3E025DF625710716BC3AA1"
     },
     {
       "name": "spread-0",
       "frames": [
         0
       ],
-      "hash": "40639AE6D5FD6CA1F386CE6147FFCCEB55095AE922655D2D028BD61F2C335DB2"
+      "hash": "19418CF8B1A86E5B77BEB3B44ADBE2130B04FEC6C1B54E283C97CF3755991320"
     },
     {
       "name": "spread-35",
       "frames": [
         0
       ],
-      "hash": "EBACD05575886E1E02E818E57FC1420E6FE73990B5DBE25418D81C757A13DE47"
+      "hash": "B43ED039FEC53DF05E14E4CA6B59759C1639633B7EEDE3217E15472E6735F151"
     },
     {
       "name": "spread-minus-25",
       "frames": [
         0
       ],
-      "hash": "47F8BB81DE8DF353E1092E93B1E6567B30453A62A8BB520AA4326C3000F140F1"
+      "hash": "9D06FB5C6E86CED02E97305545D7DDD7037D4F86552FAB31B7E0E217BFF0D9A0"
     },
     {
       "name": "length-400",
       "frames": [
         0
       ],
-      "hash": "55AA462ADDC20228E4092C95E6BADDC259EA632156172A2C51D37257DEE26EDB"
+      "hash": "30693587F5870AC63B2EDF7A379A29C00906EF6D983B36989FBAC24C10676F49"
     },
     {
       "name": "length-2800",
       "frames": [
         0
       ],
-      "hash": "C451AF89CDBB6C9DA6FE3B93B260C850550FF38988A40930ADB3852DEE8CE728"
+      "hash": "4EA4F0FCF705DBB9BBA3732897F14EF4058B97BEF48C22AA839EAE6E600055AE"
     },
     {
       "name": "length-0",
@@ -117,77 +117,77 @@
       "frames": [
         0
       ],
-      "hash": "389451AA2417542ACF64D8F1FB72D7AA5D6A15AD98C86E81B8023552D2D65465"
+      "hash": "4558510EDA9233BF273E5F52A535E4F041A091105733AA6A679BC928D1A95349"
     },
     {
       "name": "threshold-60",
       "frames": [
         0
       ],
-      "hash": "BCE8E3F0B0CB732B4504EA292BCD060BD50B56FA5F55D1B87887D9B9FDA81EFA"
+      "hash": "3FEB56A665A4A853CEC4BD049E4BA44552FE1411CE3F190D922F523EB21BEF63"
     },
     {
       "name": "tint-amber",
       "frames": [
         0
       ],
-      "hash": "9B0FB621C5A34D6A51EB11C5E10BC899A934A96781021048CB9706B3008B7431"
+      "hash": "8E58F973B08F627AFF6DA964653334FC72079CDABB2B02BC4FEBD3532EDDF24D"
     },
     {
       "name": "falloff-0",
       "frames": [
         0
       ],
-      "hash": "7BBB77391E84F06B0CB5F6435F29C3ACBDCABEE235E0E3D9E4DA6DA0090BF775"
+      "hash": "D76415C45548F3770C1C7CCD1E7FA7A93B94FBC14293296A0726FFD534A46C97"
     },
     {
       "name": "falloff-95",
       "frames": [
         0
       ],
-      "hash": "C424C4F07024D1AB4AEC6750D84DC82720F00B6948AD543B50EBC5A2217C7EB3"
+      "hash": "202E82C3210B3FAD7786F5B8CA98762E341316CECE0A68C02F2D439877591EB1"
     },
     {
       "name": "lamp-size-0",
       "frames": [
         0
       ],
-      "hash": "882AB5F9BF2EE8BBD9C8169E77619178A6FF28D9C74B46D825479CA1E91CCD82"
+      "hash": "AB24D7F3B6DB47A078B7E4E04B30BCCA1AC7C7826B0543C05B5DFCFF91446ECD"
     },
     {
       "name": "lamp-size-6",
       "frames": [
         0
       ],
-      "hash": "DD6AA03C3AF3FE7114291E4E399D071D755AA2C779CE74D3BCCE6366D489BB6B"
+      "hash": "BE08D97F9FED059B2EB09321A87AA6BA22514121914A3ABD9B40A537965420E8"
     },
     {
       "name": "scattering-minus-60",
       "frames": [
         0
       ],
-      "hash": "D0FD383568CC3EE2D1B7AC78F8AB753F479908E0781D6CC0FBFC118BA39A76C0"
+      "hash": "7B1E6C7307D93EDD776198D84A8021439BB46D81AAE99B19D21E76B5A20AA3A3"
     },
     {
       "name": "scattering-85",
       "frames": [
         0
       ],
-      "hash": "9853FCDF0492A63C51FD8BE4509E3F374F6094BDBF244ADF02C082EB8FE08F2E"
+      "hash": "1EC65D8E4BFC30D55A52B03070274D57C31B3D6E90988F7F603AB1FDBD26F4DC"
     },
     {
       "name": "source-hidden",
       "frames": [
         0
       ],
-      "hash": "06C6B8E6792856984194EDC9413EA497655B0FAC008B7455D004FCBA2DB7F891"
+      "hash": "ACB0D0AE498CDC2B5D49C0F2087FB5F1ECDCB36E79A1DC34C1AC2F338D9161C9"
     },
     {
       "name": "dust-60",
       "frames": [
         0
       ],
-      "hash": "5CFEE887B02B11B83982C53EC15BC372B9876D360A2325ADD4CF2EC8064AFE27"
+      "hash": "73067DEB8B7BDDB9EC8D69B8CF5060C2DE8F109CD1E13AF1974F02DA6B04C196"
     },
     {
       "name": "dust-60-animated-frames",
@@ -196,98 +196,156 @@
         90,
         180
       ],
-      "hash": "EF853C8724E995B1E7028DA336DDD8F06D687484CD9476AA21424165E9B3DFE8"
+      "hash": "CC0CBA43D0F8060B2B09741F8EA9681C3299C5FF9AA992BC4C6E9DDC137CE84F"
     },
     {
       "name": "dust-seed-7",
       "frames": [
         0
       ],
-      "hash": "50CE845CB4114CF145D1DFDA2CF4FD1C5F2C8161BB1FBB55869AC726E03F0C21"
+      "hash": "8D721AB792A0D2048F73C86013960D234697FE5C6141F663A98958870AAA5A5B"
     },
     {
       "name": "quality-high",
       "frames": [
         0
       ],
-      "hash": "551C252D95450796D94CDBF023D03AE1306B3FFBB2383B10255AF55754A1B31D"
+      "hash": "322333481D79A16D0599E1316261B6EC41668AB6CF8E6D870889497B51BC1B58"
     },
     {
       "name": "quality-ultra",
       "frames": [
         0
       ],
-      "hash": "64BB68765A4A9BAD849A9660F83B0D8A4F2757777BF325BA4B42D70B03FFC875"
+      "hash": "338B953EACEB00CDB803327228060756CA5ECE48EEB40EA650974425493939CC"
     },
     {
       "name": "pose-rotated-y",
       "frames": [
         0
       ],
-      "hash": "283424A554B7A03948CEF7B2F405EB9B1A5707D461FE6965C30C86E0FFD03BA4"
+      "hash": "CB75312042B9C442148870DBC62E66EDCA9B6BB674706A6F343DA49E690E9E18"
     },
     {
       "name": "pose-rotated-x",
       "frames": [
         0
       ],
-      "hash": "31038B97A2F596D9A4C013A1FF23C42312F067A9EAD1FB351CC30E635540C228"
+      "hash": "06FF1E795A6984C57BB6C44A9F10269C621E901092D66674677BBFF6EDF9280F"
     },
     {
       "name": "pose-rotated-z",
       "frames": [
         0
       ],
-      "hash": "E0E0F74D0E72E76C7F68D9836780D03D05CFC5B35D10AABC2BA5587282303F1D"
+      "hash": "5FCAB8B93ED45E96731C28A16C8C51ABBE1EF428F2C9C0860FE675B36E71F9C6"
     },
     {
       "name": "pose-shrunk",
       "frames": [
         0
       ],
-      "hash": "2137D38C43C205AEA751E8E7C83C1A11AEB910EF00F15D0F12EB0DD10B1F2D0D"
+      "hash": "F79342FCE10B0494D8EECB8DFC234C74F219C581434965FC6CB39AF568996493"
     },
     {
       "name": "pose-offset",
       "frames": [
         0
       ],
-      "hash": "6BA09E49A690297231DA0AB7E3A3DE14CF74B4BE0E7703B21CA2EBB8368C3D9E"
+      "hash": "D49A0B11B01C8C4FB35D1C8604EB231248D821E36CE833E08BB617EC0567ED1C"
     },
     {
       "name": "pose-near",
       "frames": [
         0
       ],
-      "hash": "8A099E111DA6DE8705DA977A2540BCD72683CE23D506DEFC73BC53E46D0DA9A0"
+      "hash": "9F41B6C7BB5D9FD9245CD5CB0E06A502E7613E1E249B8A28CC86FBBED1738637"
     },
     {
       "name": "pose-mirrored",
       "frames": [
         0
       ],
-      "hash": "0243DF70E5695329B661D9D1F7F9ECD71AA147E606F228EA0896BA30581EC54A"
+      "hash": "DC258106CA130AF7D9D3F937E24CA5B35F7AE752A6F46385BDD9D05B11BBD748"
     },
     {
       "name": "pose-orbit",
       "frames": [
         0
       ],
-      "hash": "D2A235919D4ADF6EC18338647D4520361B3325D4C73332ED44FB336047F61060"
+      "hash": "3813DBE687FC6CA379CBA5885AFFCB3E1E90ABDE646FDE8E51AB36E744401CEA"
     },
     {
       "name": "pose-telephoto",
       "frames": [
         0
       ],
-      "hash": "1C0632DD227532E91B4E4C7AD3B234700A3DA1B668DA36E62F274FA53A365968"
+      "hash": "17CD7C9969DCD10E85A0FFC50C79D69DEF33CDA36FFCFFCA023708E8CD360211"
     },
     {
       "name": "pose-rotated-y-converging",
       "frames": [
         0
       ],
-      "hash": "BBC9E3D3D7AE995232EE26039E395E9484755B43A0C8D39A99A2D9334B4E0334"
+      "hash": "FCDA7898A1348764430DFEDFCB1881788BC49E2422E1E41636FA676A0C98920E"
+    },
+    {
+      "name": "shadow-figure",
+      "frames": [
+        0
+      ],
+      "hash": "85AA906B4218F1ED6BED71C94BC973A64F9FCE1FC79CB986964613F5689C2E62"
+    },
+    {
+      "name": "shadow-figure-default-light",
+      "frames": [
+        0
+      ],
+      "hash": "1A4F09029ABB1D29F8CAE9BE65E3FF3CA6D2F97FE1580CF2AECB45BD9CC85C8B"
+    },
+    {
+      "name": "shadow-figure-point-light",
+      "frames": [
+        0
+      ],
+      "hash": "E9C02F93C4A29C6CF11DF205D09364594F06E69863928E80898C2A716F785206"
+    },
+    {
+      "name": "shadow-two-figures",
+      "frames": [
+        0
+      ],
+      "hash": "99070A5A660094BAB227022FCE8CB0A7C6B66B79AEBA4C4DE85E0C26AF40A471"
+    },
+    {
+      "name": "shadow-figure-half-strength",
+      "frames": [
+        0
+      ],
+      "hash": "45F8CC71613C9A2DEDB095247AF962C8D8105042D4E30D5152AA13B7EBAD4398"
+    },
+    {
+      "name": "shadow-figure-strength-animated-frames",
+      "frames": [
+        0,
+        150,
+        299
+      ],
+      "hash": "B448BCCDFAFFB5E90BC6D8D934CF8FA81C49DC0D1D35444A898F8871A7AC027F"
+    },
+    {
+      "name": "shadow-figure-rotated-light",
+      "frames": [
+        0
+      ],
+      "hash": "6885C2736451491A0EC78156B9813B642238350992D3F33BF52435E1ADC9DE83"
+    },
+    {
+      "name": "shadow-figure-other-number",
+      "frames": [
+        0
+      ],
+      "hash": "1A51B17D1AED60E09859C11096786A0D26CF07D15308896E28B3596A063A5CA8"
     }
   ]
 }
