@@ -33,6 +33,10 @@ internal static class VolumetricLightSettings
     public const int PlaneCount = 6;
     public const float ParallelEpsilon = 1e-6f;
 
+    public const int OccluderCapacity = 4;
+    public const int MaximumOcclusionChannel = 8;
+    public const double MaximumOccluderStrengthPercent = PercentScale;
+
     public static QualityLimits GetQualityLimits(VolumetricLightQuality quality) => quality switch
     {
         VolumetricLightQuality.High => new QualityLimits(0.5f, 1.5, 128),
