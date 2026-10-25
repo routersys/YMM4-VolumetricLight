@@ -25,7 +25,7 @@ public sealed class VolumetricLightEffectTests
     [InlineData(nameof(VolumetricLightEffect.Elevation), 55d, -89d, 89d)]
     [InlineData(nameof(VolumetricLightEffect.Spread), 10d, -85d, 85d)]
     [InlineData(nameof(VolumetricLightEffect.Length), 1200d, 0d, 100000d)]
-    [InlineData(nameof(VolumetricLightEffect.Intensity), 100d, 0d, 1000d)]
+    [InlineData(nameof(VolumetricLightEffect.Intensity), 150d, 0d, 1000d)]
     [InlineData(nameof(VolumetricLightEffect.Threshold), 8d, 0d, 100d)]
     [InlineData(nameof(VolumetricLightEffect.Falloff), 60d, 0d, 100d)]
     [InlineData(nameof(VolumetricLightEffect.LampSize), 1.5d, 0d, 30d)]

@@ -44,7 +44,7 @@ public sealed class VolumetricLightEffect : VideoEffectBase
 
     [Display(GroupName = nameof(Texts.LightGroup), Name = nameof(Texts.Intensity), Description = nameof(Texts.IntensityDescription), Order = 10, ResourceType = typeof(Texts))]
     [AnimationSlider("F1", "%", 0, 300)]
-    public Animation Intensity { get; } = new Animation(100, 0, VolumetricLightSettings.MaximumIntensityPercent);
+    public Animation Intensity { get; } = new Animation(150, 0, VolumetricLightSettings.MaximumIntensityPercent);
 
     [Display(GroupName = nameof(Texts.LightGroup), Name = nameof(Texts.Threshold), Description = nameof(Texts.ThresholdDescription), Order = 11, ResourceType = typeof(Texts))]
     [AnimationSlider("F1", "%", 0, 100)]
