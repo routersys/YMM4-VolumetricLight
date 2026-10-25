@@ -229,7 +229,7 @@ internal sealed class ShaftCustomEffect : D2D1CustomShaderEffectBase
 
             Span<Occluder> occluders = stackalloc Occluder[VolumetricLightSettings.OccluderCapacity];
             Span<float> strengths = stackalloc float[VolumetricLightSettings.OccluderCapacity];
-            group.Snapshot(occluders);
+            group.Snapshot(occluders, link.Frame);
             for (var index = 0; index < occluders.Length; index++)
             {
                 var plane = OccluderPlane.Create(_cameraFromLocal, occluders[index]);

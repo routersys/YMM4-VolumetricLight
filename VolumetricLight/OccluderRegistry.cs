@@ -17,6 +17,7 @@ internal sealed class OccluderGroup : IDisposable
     private readonly ID2D1Image[] _outputs = new ID2D1Image[VolumetricLightSettings.OccluderCapacity];
     private readonly ID2D1Image?[] _published = new ID2D1Image?[VolumetricLightSettings.OccluderCapacity];
     private readonly Occluder[] _requested = new Occluder[VolumetricLightSettings.OccluderCapacity];
+    private readonly int[] _frames = new int[VolumetricLightSettings.OccluderCapacity];
     private readonly bool[] _blocked = new bool[VolumetricLightSettings.OccluderCapacity];
     private readonly int[] _checked = new int[VolumetricLightSettings.OccluderCapacity];
     private readonly HashSet<nint> _consumers = [];
@@ -78,12 +79,12 @@ internal sealed class OccluderGroup : IDisposable
         }
     }
 
-    public void Snapshot(Span<Occluder> destination)
+    public void Snapshot(Span<Occluder> destination, int frame)
     {
         lock (_gate)
         {
             for (var index = 0; index < destination.Length; index++)
-                destination[index] = !_disposed && index < _occluders.Length ? _occluders[index] : default;
+                destination[index] = !_disposed && index < _occluders.Length && _frames[index] == frame ? _occluders[index] : default;
         }
     }
 
@@ -124,7 +125,7 @@ internal sealed class OccluderGroup : IDisposable
         }
     }
 
-    internal void Publish(int index, ID2D1Image image, in Occluder occluder)
+    internal void Publish(int index, ID2D1Image image, in Occluder occluder, int frame)
     {
         lock (_gate)
         {
@@ -132,6 +133,7 @@ internal sealed class OccluderGroup : IDisposable
                 return;
 
             _requested[index] = occluder;
+            _frames[index] = frame;
             if (!ReferenceEquals(_published[index], image) || _checked[index] != _version)
             {
                 _published[index] = image;
@@ -217,7 +219,7 @@ internal sealed class OccluderSlot(OccluderGroup group, int index) : IDisposable
 {
     private int _retired;
 
-    public void Publish(ID2D1Image image, in Occluder occluder) => group.Publish(index, image, occluder);
+    public void Publish(ID2D1Image image, in Occluder occluder, int frame) => group.Publish(index, image, occluder, frame);
 
     public void Dispose()
     {
@@ -229,13 +231,13 @@ internal sealed class OccluderSlot(OccluderGroup group, int index) : IDisposable
 internal sealed class OccluderLease : IDisposable
 {
     private readonly OccluderBoard _board;
-    private readonly int _channel;
+    private readonly (Guid Scene, int Channel) _key;
     private int _released;
 
-    internal OccluderLease(OccluderBoard board, int channel, OccluderGroup group)
+    internal OccluderLease(OccluderBoard board, (Guid Scene, int Channel) key, OccluderGroup group)
     {
         _board = board;
-        _channel = channel;
+        _key = key;
         Group = group;
     }
 
@@ -244,7 +246,7 @@ internal sealed class OccluderLease : IDisposable
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _released, 1) == 0)
-            _board.Release(_channel);
+            _board.Release(_key);
     }
 }
 
@@ -258,31 +260,32 @@ internal sealed class OccluderBoard
     }
 
     private readonly object _gate = new();
-    private readonly Dictionary<int, Entry> _entries = [];
+    private readonly Dictionary<(Guid Scene, int Channel), Entry> _entries = [];
 
-    public OccluderLease Acquire(IGraphicsDevicesAndContext devices, int channel)
+    public OccluderLease Acquire(IGraphicsDevicesAndContext devices, Guid scene, int channel)
     {
+        var key = (scene, channel);
         lock (_gate)
         {
-            if (!_entries.TryGetValue(channel, out var entry))
+            if (!_entries.TryGetValue(key, out var entry))
             {
                 entry = new Entry(new OccluderGroup(devices.DeviceContext));
-                _entries.Add(channel, entry);
+                _entries.Add(key, entry);
             }
 
             entry.References++;
-            return new OccluderLease(this, channel, entry.Group);
+            return new OccluderLease(this, key, entry.Group);
         }
     }
 
-    internal void Release(int channel)
+    internal void Release((Guid Scene, int Channel) key)
     {
         lock (_gate)
         {
-            if (!_entries.TryGetValue(channel, out var entry) || --entry.References > 0)
+            if (!_entries.TryGetValue(key, out var entry) || --entry.References > 0)
                 return;
 
-            _entries.Remove(channel);
+            _entries.Remove(key);
             entry.Group.Dispose();
         }
     }
@@ -292,18 +295,25 @@ internal static class OccluderRegistry
 {
     private static readonly ConditionalWeakTable<D2DDevices, OccluderBoard> Boards = [];
 
-    public static OccluderLease Acquire(IGraphicsDevicesAndContext devices, int channel)
-        => Boards.GetValue(devices.D2D, _ => new OccluderBoard()).Acquire(devices, channel);
+    public static OccluderLease Acquire(IGraphicsDevicesAndContext devices, Guid scene, int channel)
+        => Boards.GetValue(devices.D2D, _ => new OccluderBoard()).Acquire(devices, scene, channel);
 }
 
 internal sealed class OccluderLink
 {
     private OccluderGroup? _group;
+    private int _frame;
 
     public OccluderGroup? Group
     {
         get => Volatile.Read(ref _group);
         set => Volatile.Write(ref _group, value);
+    }
+
+    public int Frame
+    {
+        get => Volatile.Read(ref _frame);
+        set => Volatile.Write(ref _frame, value);
     }
 }
 

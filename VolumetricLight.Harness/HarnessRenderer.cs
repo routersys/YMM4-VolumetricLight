@@ -228,7 +228,7 @@ internal sealed class HarnessRenderer : IDisposable
         sync.Unmap();
     }
 
-    internal EffectDescription Describe(int frame, HarnessPose? pose)
+    internal EffectDescription Describe(int frame, HarnessPose? pose, Guid scene = default)
     {
         var timeline = new TimelineSourceDescription(
             new System.Drawing.Size(CanvasWidth, CanvasHeight),
@@ -236,7 +236,7 @@ internal sealed class HarnessRenderer : IDisposable
             new YukkuriMovieMaker.Player.Video.FrameTime(Length, Fps),
             Fps,
             TimelineSourceUsage.Playing,
-            Guid.Empty,
+            scene,
             []);
         var item = new TimelineItemSourceDescription(timeline, frame, Length, 0);
         var placement = pose ?? HarnessPose.Flat;

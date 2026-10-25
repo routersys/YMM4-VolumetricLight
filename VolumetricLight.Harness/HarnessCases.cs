@@ -95,6 +95,8 @@ internal static class HarnessCases
         yield return ("shadow-figure-half-strength", Shadowed(effect => effect.Direction.Values[0].Value = -60), [0], HarnessPose.Flat, [Figure(new Vector3(-120f, 110f, 240f), configure: effect => effect.Strength.Values[0].Value = 50)]);
         yield return ("shadow-figure-strength-animated-frames", Shadowed(effect => effect.Direction.Values[0].Value = -60), [0, 150, 299], HarnessPose.Flat, [Figure(new Vector3(-120f, 110f, 240f), configure: effect => effect.Strength.CopyFrom(Linear(100d, 10d)))]);
         yield return ("shadow-figure-rotated-light", Shadowed(), [0], RotatedY, [Figure(new Vector3(0f, 120f, 200f))]);
+        yield return ("shadow-figure-other-scene", Shadowed(effect => { effect.Direction.Values[0].Value = -60; effect.Elevation.Values[0].Value = 45; }), [0], HarnessPose.Flat, [Figure(new Vector3(40f, 120f, 220f)) with { Scene = new Guid("5b0a8d3e-2c1f-4e7a-9a52-7d4f1c6b8e90") }]);
+        yield return ("shadow-figure-other-frame", Shadowed(effect => { effect.Direction.Values[0].Value = -60; effect.Elevation.Values[0].Value = 45; }), [0], HarnessPose.Flat, [Figure(new Vector3(-220f, 130f, 160f)) with { FrameOffset = 7 }]);
         yield return ("shadow-figure-other-number", Shadowed(effect => { effect.Direction.Values[0].Value = -60; effect.Elevation.Values[0].Value = 45; }), [0], HarnessPose.Flat, [Figure(new Vector3(-120f, 110f, 240f), configure: effect => effect.Channel = 2)]);
     }
 

@@ -49,9 +49,11 @@ public sealed class VolumetricLightOccluderEffectProcessorTests
     {
         readonly IGraphicsDevicesAndContext context;
         readonly SourceImage source;
+        readonly Guid scene;
 
-        public Item(GraphicsDevices devices, YukkuriMovieMaker.Plugin.Effects.VideoEffectBase effect, Func<int, int, Bgra> pixels)
+        public Item(GraphicsDevices devices, YukkuriMovieMaker.Plugin.Effects.VideoEffectBase effect, Func<int, int, Bgra> pixels, Guid scene = default)
         {
+            this.scene = scene;
             context = devices.CreateContext();
             source = new SourceImage(context, Width, Height, pixels);
             Processor = effect.CreateVideoEffect(context);
@@ -62,12 +64,12 @@ public sealed class VolumetricLightOccluderEffectProcessorTests
 
         public SourceImage Source => source;
 
-        public DrawDescription Update(int frame, DrawDescription draw)
-            => Processor.Update(EffectDescriptions.At(frame, Length, draw, Canvas));
+        public DrawDescription Update(int frame, DrawDescription draw, Guid? moveTo = null)
+            => Processor.Update(EffectDescriptions.At(frame, Length, draw, Canvas, moveTo ?? scene));
 
-        public Rendering Render(int frame, DrawDescription draw)
+        public Rendering Render(int frame, DrawDescription draw, Guid? moveTo = null)
         {
-            Update(frame, draw);
+            Update(frame, draw, moveTo);
             return Rendering.Capture(context, Processor.Output);
         }
 
@@ -92,11 +94,11 @@ public sealed class VolumetricLightOccluderEffectProcessorTests
             .Where(point => point.X < 0 || point.Y < 0 || point.X >= Width || point.Y >= Height)
             .Sum(point => (long)rendering[point.X, point.Y].Red + rendering[point.X, point.Y].Green + rendering[point.X, point.Y].Blue);
 
-    static Occluder[] Snapshot(IGraphicsDevicesAndContext context, int channel)
+    static Occluder[] Snapshot(IGraphicsDevicesAndContext context, int channel, int frame = 0, Guid scene = default)
     {
-        using var lease = OccluderRegistry.Acquire(context, channel);
+        using var lease = OccluderRegistry.Acquire(context, scene, channel);
         var snapshot = new Occluder[VolumetricLightSettings.OccluderCapacity];
-        lease.Group.Snapshot(snapshot);
+        lease.Group.Snapshot(snapshot, frame);
         return snapshot;
     }
 
@@ -158,8 +160,8 @@ public sealed class VolumetricLightOccluderEffectProcessorTests
         effect.Channel = 3;
         item.Update(1, InFront);
 
-        Assert.All(Snapshot(context, 1), occluder => Assert.Equal(0f, occluder.Strength));
-        Assert.True(Snapshot(context, 3)[0].Strength > 0f);
+        Assert.All(Snapshot(context, 1, 1), occluder => Assert.Equal(0f, occluder.Strength));
+        Assert.True(Snapshot(context, 3, 1)[0].Strength > 0f);
     }
 
     [Fact]
@@ -185,13 +187,13 @@ public sealed class VolumetricLightOccluderEffectProcessorTests
         var light = Light(1).CreateVideoEffect(context);
         light.SetInput(source.Bitmap);
         light.Update(EffectDescriptions.At(0, Length, EffectDescriptions.Flat, Canvas));
-        var held = OccluderRegistry.Acquire(context, 1);
+        var held = OccluderRegistry.Acquire(context, Guid.Empty, 1);
         var group = held.Group;
 
         light.Dispose();
         held.Dispose();
 
-        using var again = OccluderRegistry.Acquire(context, 1);
+        using var again = OccluderRegistry.Acquire(context, Guid.Empty, 1);
         Assert.NotSame(group, again.Group);
     }
 
@@ -209,8 +211,9 @@ public sealed class VolumetricLightOccluderEffectProcessorTests
 
             Assert.All(snapshot, occluder => Assert.True(occluder.Strength > 0f));
             items[0].Dispose();
-            items[^1].Update(1, InFront);
-            Assert.All(Snapshot(context, 1), occluder => Assert.True(occluder.Strength > 0f));
+            foreach (var item in items.Skip(1))
+                item.Update(1, InFront);
+            Assert.All(Snapshot(context, 1, 1), occluder => Assert.True(occluder.Strength > 0f));
         }
         finally
         {
@@ -273,6 +276,96 @@ public sealed class VolumetricLightOccluderEffectProcessorTests
         Assert.True(before > 0);
         Assert.True(after < before * 0.9, $"{after} {before}");
         Assert.True(darker > Width * Height / 4, $"{darker}");
+    }
+
+    [Fact]
+    public void AnOccluderPublishedForAnotherFrameCastsNoShadowUntilThatFrame()
+    {
+        using var devices = new GraphicsDevices();
+        using var light = new Item(devices, Light(1), Glass);
+        using var occluder = new Item(devices, Blocker(), Bars);
+        var clearNow = light.Render(0, EffectDescriptions.Flat);
+        var clearLater = light.Render(15, EffectDescriptions.Flat);
+
+        occluder.Update(15, InFront);
+
+        Assert.True(clearNow.SamePixelsAs(light.Render(0, EffectDescriptions.Flat)));
+        Assert.True(OutsideLight(light.Render(15, EffectDescriptions.Flat)) < OutsideLight(clearLater) * 0.9);
+    }
+
+    [Fact]
+    public void AnOccluderInAnotherSceneNeverReachesTheLight()
+    {
+        var home = Guid.NewGuid();
+        var away = Guid.NewGuid();
+        using var devices = new GraphicsDevices();
+        using var light = new Item(devices, Light(1), Glass, home);
+        using var foreign = new Item(devices, Blocker(), Bars, away);
+        var clear = light.Render(0, EffectDescriptions.Flat);
+
+        foreign.Update(0, InFront);
+        Assert.True(clear.SamePixelsAs(light.Render(0, EffectDescriptions.Flat)));
+
+        using var native = new Item(devices, Blocker(), Bars, home);
+        native.Update(0, InFront);
+        Assert.True(OutsideLight(light.Render(0, EffectDescriptions.Flat)) < OutsideLight(clear) * 0.9);
+    }
+
+    [Fact]
+    public void ALightThatMovesToAnotherSceneFollowsTheOccludersThereAndLeavesTheOldOnes()
+    {
+        var home = Guid.NewGuid();
+        var away = Guid.NewGuid();
+        using var devices = new GraphicsDevices();
+        using var light = new Item(devices, Light(1), Glass, home);
+        using var occluder = new Item(devices, Blocker(), Bars, away);
+        var clear = light.Render(0, EffectDescriptions.Flat);
+        occluder.Update(0, InFront);
+
+        Assert.True(OutsideLight(light.Render(0, EffectDescriptions.Flat, away)) < OutsideLight(clear) * 0.9);
+        Assert.True(clear.SamePixelsAs(light.Render(0, EffectDescriptions.Flat, home)));
+    }
+
+    [Fact]
+    public void AnOccluderThatMovesToAnotherSceneLeavesTheLightsOfTheOldOne()
+    {
+        var home = Guid.NewGuid();
+        var away = Guid.NewGuid();
+        using var devices = new GraphicsDevices();
+        using var light = new Item(devices, Light(1), Glass, home);
+        using var occluder = new Item(devices, Blocker(), Bars, home);
+        var clear = light.Render(0, EffectDescriptions.Flat);
+        occluder.Update(0, InFront);
+        Assert.True(OutsideLight(light.Render(0, EffectDescriptions.Flat)) < OutsideLight(clear) * 0.9);
+
+        occluder.Update(0, InFront, away);
+
+        Assert.True(clear.SamePixelsAs(light.Render(0, EffectDescriptions.Flat)));
+    }
+
+    [Fact]
+    public void EachSceneKeepsItsOwnFourOccluderSlotsOnTheSameNumber()
+    {
+        var home = Guid.NewGuid();
+        var away = Guid.NewGuid();
+        using var devices = new GraphicsDevices();
+        using var context = devices.CreateContext();
+        var items = Enumerable.Range(0, VolumetricLightSettings.OccluderCapacity + 1)
+            .Select(index => new Item(devices, Blocker(), Bars, index < VolumetricLightSettings.OccluderCapacity ? home : away))
+            .ToArray();
+        try
+        {
+            foreach (var item in items)
+                item.Update(0, InFront);
+
+            Assert.All(Snapshot(context, 1, 0, home), occluder => Assert.True(occluder.Strength > 0f));
+            Assert.True(Snapshot(context, 1, 0, away)[0].Strength > 0f);
+        }
+        finally
+        {
+            foreach (var item in items)
+                item.Dispose();
+        }
     }
 
     [Fact]

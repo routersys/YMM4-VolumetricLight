@@ -54,6 +54,7 @@ internal sealed class VolumetricLightEffectProcessor(IGraphicsDevicesAndContext 
     private int _linkId;
     private OccluderLease? _lease;
     private int _occlusionChannel = -1;
+    private Guid _occlusionScene;
     private int _revision;
 
     public override DrawDescription Update(EffectDescription effectDescription)
@@ -100,7 +101,8 @@ internal sealed class VolumetricLightEffectProcessor(IGraphicsDevicesAndContext 
         {
             SetScale(scene.Scale);
             Apply(scene.Constants);
-            SetOcclusion(Math.Clamp(_item.OcclusionChannel, 0, VolumetricLightSettings.MaximumOcclusionChannel));
+            _link.Frame = effectDescription.TimelinePosition.Frame;
+            SetOcclusion(effectDescription.SceneId, Math.Clamp(_item.OcclusionChannel, 0, VolumetricLightSettings.MaximumOcclusionChannel));
             SetShaft(ShaftState.Shaft);
         }
 
@@ -213,18 +215,19 @@ internal sealed class VolumetricLightEffectProcessor(IGraphicsDevicesAndContext 
         _constants = next;
     }
 
-    private void SetOcclusion(int channel)
+    private void SetOcclusion(Guid scene, int channel)
     {
-        if (_occlusionChannel != channel)
+        if (_occlusionChannel != channel || _occlusionScene != scene)
         {
             ReleaseOcclusion();
-            _lease = channel > 0 ? OccluderRegistry.Acquire(_devices, channel) : null;
+            _lease = channel > 0 ? OccluderRegistry.Acquire(_devices, scene, channel) : null;
             _lease?.Group.AddConsumer(_shaft!.NativePointer);
             for (var slot = 0; slot < VolumetricLightSettings.OccluderCapacity; slot++)
                 _shaft!.SetInput(VolumetricLightSettings.GoboLevelCount + slot, _lease?.Group.GetOutput(slot) ?? _emptyOutput, true);
 
             _link.Group = _lease?.Group;
             _occlusionChannel = channel;
+            _occlusionScene = scene;
         }
 
         if (_lease?.Group.IsOccupied == true)

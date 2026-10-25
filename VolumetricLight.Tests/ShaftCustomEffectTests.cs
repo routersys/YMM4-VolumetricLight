@@ -53,11 +53,11 @@ public sealed class ShaftCustomEffectTests(ITestOutputHelper output)
         readonly OccluderLease lease;
         readonly OccluderSlot[] slots;
         readonly ID2D1Bitmap1[] bitmaps;
-        readonly OccluderLink link = new();
+        readonly OccluderLink link = new() { Frame = 0 };
 
         public OccluderRig(IGraphicsDevicesAndContext devices, IReadOnlyList<(DrawDescription Draw, GoboPyramid Image, float Strength)> occluders)
         {
-            lease = OccluderRegistry.Acquire(devices, 1);
+            lease = OccluderRegistry.Acquire(devices, Guid.Empty, 1);
             link.Group = lease.Group;
             LinkId = OccluderLinks.Register(link);
             slots = new OccluderSlot[occluders.Count];
@@ -68,7 +68,7 @@ public sealed class ShaftCustomEffectTests(ITestOutputHelper output)
                 Assert.True(ViewTransform.TryCreate(draw, out var view));
                 slots[index] = lease.Group.Claim()!;
                 bitmaps[index] = image.CreateBitmaps(devices)[0];
-                slots[index].Publish(bitmaps[index], new Occluder(view, GoboMapping.Create(draw.Zoom, draw.Invert, draw.CenterPoint), strength));
+                slots[index].Publish(bitmaps[index], new Occluder(view, GoboMapping.Create(draw.Zoom, draw.Invert, draw.CenterPoint), strength), 0);
             }
         }
 

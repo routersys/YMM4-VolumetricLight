@@ -341,6 +341,20 @@
       "hash": "6885C2736451491A0EC78156B9813B642238350992D3F33BF52435E1ADC9DE83"
     },
     {
+      "name": "shadow-figure-other-scene",
+      "frames": [
+        0
+      ],
+      "hash": "44996CD0E824BAE692A7BFF8063E42BFEA76A8E1997B93A86584B92956835454"
+    },
+    {
+      "name": "shadow-figure-other-frame",
+      "frames": [
+        0
+      ],
+      "hash": "91CC1D8F8948BE95E71C93CFE47816849FDF2A03D1DA5E7752059F401CB0774F"
+    },
+    {
       "name": "shadow-figure-other-number",
       "frames": [
         0

@@ -6,7 +6,7 @@ using YukkuriMovieMaker.Player.Video;
 
 namespace VolumetricLight.Harness;
 
-internal sealed record HarnessOccluder(VolumetricLightOccluderEffect Effect, HarnessPose Pose, HarnessImage Image);
+internal sealed record HarnessOccluder(VolumetricLightOccluderEffect Effect, HarnessPose Pose, HarnessImage Image, Guid Scene = default, int FrameOffset = 0);
 
 internal sealed class HarnessOccluderScene : IDisposable
 {
@@ -57,11 +57,11 @@ internal sealed class HarnessOccluderScene : IDisposable
 
     public IEnumerable<ID2D1Image> Layers => entries.Select(entry => entry.Display.Output);
 
-    public void Update(Func<int, HarnessPose?, EffectDescription> describe, int frame)
+    public void Update(Func<int, HarnessPose?, Guid, EffectDescription> describe, int frame)
     {
         foreach (var entry in entries)
         {
-            var description = describe(frame, entry.Occluder.Pose);
+            var description = describe(frame + entry.Occluder.FrameOffset, entry.Occluder.Pose, entry.Occluder.Scene);
             entry.Blocker.Update(description);
             entry.Display.Update(description);
         }

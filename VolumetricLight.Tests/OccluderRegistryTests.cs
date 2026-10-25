@@ -28,12 +28,52 @@ public sealed class OccluderRegistryTests
         using var first = devices.CreateContext();
         using var second = devices.CreateContext();
 
-        using var a = OccluderRegistry.Acquire(first, 1);
-        using var b = OccluderRegistry.Acquire(second, 1);
-        using var c = OccluderRegistry.Acquire(first, 2);
+        using var a = OccluderRegistry.Acquire(first, Guid.Empty, 1);
+        using var b = OccluderRegistry.Acquire(second, Guid.Empty, 1);
+        using var c = OccluderRegistry.Acquire(first, Guid.Empty, 2);
 
         Assert.Same(a.Group, b.Group);
         Assert.NotSame(a.Group, c.Group);
+    }
+
+    [Fact]
+    public void TheSameNumberInAnotherSceneHasItsOwnGroup()
+    {
+        using var devices = new GraphicsDevices();
+        using var context = devices.CreateContext();
+        var home = Guid.NewGuid();
+
+        using var a = OccluderRegistry.Acquire(context, home, 1);
+        using var b = OccluderRegistry.Acquire(context, home, 1);
+        using var c = OccluderRegistry.Acquire(context, Guid.NewGuid(), 1);
+
+        Assert.Same(a.Group, b.Group);
+        Assert.NotSame(a.Group, c.Group);
+    }
+
+    [Fact]
+    public void ASnapshotKeepsOnlyTheOccludersPublishedForItsOwnFrame()
+    {
+        using var devices = new GraphicsDevices();
+        using var context = devices.CreateContext();
+        using var source = new SourceImage(context, Width, Height, Marker);
+        using var lease = OccluderRegistry.Acquire(context, Guid.Empty, 1);
+        using var now = lease.Group.Claim()!;
+        using var later = lease.Group.Claim()!;
+        now.Publish(source.Bitmap, Sample(0.25f), 4);
+        later.Publish(source.Bitmap, Sample(0.75f), 9);
+        var snapshot = new Occluder[VolumetricLightSettings.OccluderCapacity];
+
+        lease.Group.Snapshot(snapshot, 4);
+        Assert.Equal(0.25f, snapshot[0].Strength);
+        Assert.Equal(0f, snapshot[1].Strength);
+
+        lease.Group.Snapshot(snapshot, 9);
+        Assert.Equal(0f, snapshot[0].Strength);
+        Assert.Equal(0.75f, snapshot[1].Strength);
+
+        lease.Group.Snapshot(snapshot, 5);
+        Assert.All(snapshot, occluder => Assert.Equal(0f, occluder.Strength));
     }
 
     [Fact]
@@ -44,8 +84,8 @@ public sealed class OccluderRegistryTests
         using var first = firstDevices.CreateContext();
         using var second = secondDevices.CreateContext();
 
-        using var a = OccluderRegistry.Acquire(first, 1);
-        using var b = OccluderRegistry.Acquire(second, 1);
+        using var a = OccluderRegistry.Acquire(first, Guid.Empty, 1);
+        using var b = OccluderRegistry.Acquire(second, Guid.Empty, 1);
 
         Assert.NotSame(a.Group, b.Group);
     }
@@ -55,8 +95,8 @@ public sealed class OccluderRegistryTests
     {
         using var devices = new GraphicsDevices();
         using var context = devices.CreateContext();
-        var a = OccluderRegistry.Acquire(context, 3);
-        var b = OccluderRegistry.Acquire(context, 3);
+        var a = OccluderRegistry.Acquire(context, Guid.Empty, 3);
+        var b = OccluderRegistry.Acquire(context, Guid.Empty, 3);
         var group = a.Group;
         var slot = group.Claim()!;
 
@@ -64,7 +104,7 @@ public sealed class OccluderRegistryTests
         a.Dispose();
         Assert.NotNull(group.Claim());
         b.Dispose();
-        using var again = OccluderRegistry.Acquire(context, 3);
+        using var again = OccluderRegistry.Acquire(context, Guid.Empty, 3);
 
         Assert.NotSame(group, again.Group);
         Assert.Null(group.Claim());
@@ -76,7 +116,7 @@ public sealed class OccluderRegistryTests
     {
         using var devices = new GraphicsDevices();
         using var context = devices.CreateContext();
-        using var lease = OccluderRegistry.Acquire(context, 1);
+        using var lease = OccluderRegistry.Acquire(context, Guid.Empty, 1);
         var slots = Enumerable.Range(0, VolumetricLightSettings.OccluderCapacity).Select(_ => lease.Group.Claim()).ToArray();
 
         Assert.All(slots, Assert.NotNull);
@@ -93,7 +133,7 @@ public sealed class OccluderRegistryTests
     {
         using var devices = new GraphicsDevices();
         using var context = devices.CreateContext();
-        using var lease = OccluderRegistry.Acquire(context, 1);
+        using var lease = OccluderRegistry.Acquire(context, Guid.Empty, 1);
         Assert.False(lease.Group.IsOccupied);
 
         var first = lease.Group.Claim()!;
@@ -111,18 +151,18 @@ public sealed class OccluderRegistryTests
         using var devices = new GraphicsDevices();
         using var context = devices.CreateContext();
         using var source = new SourceImage(context, Width, Height, Marker);
-        using var lease = OccluderRegistry.Acquire(context, 1);
+        using var lease = OccluderRegistry.Acquire(context, Guid.Empty, 1);
         using var first = lease.Group.Claim()!;
         var second = lease.Group.Claim()!;
         var snapshot = new Occluder[VolumetricLightSettings.OccluderCapacity];
 
-        first.Publish(source.Bitmap, Sample(0.25f));
-        second.Publish(source.Bitmap, Sample(0.75f));
-        lease.Group.Snapshot(snapshot);
+        first.Publish(source.Bitmap, Sample(0.25f), 0);
+        second.Publish(source.Bitmap, Sample(0.75f), 0);
+        lease.Group.Snapshot(snapshot, 0);
         Assert.Equal([0.25f, 0.75f, 0f, 0f], snapshot.Select(occluder => occluder.Strength));
 
         second.Dispose();
-        lease.Group.Snapshot(snapshot);
+        lease.Group.Snapshot(snapshot, 0);
         Assert.Equal([0.25f, 0f, 0f, 0f], snapshot.Select(occluder => occluder.Strength));
     }
 
@@ -132,13 +172,13 @@ public sealed class OccluderRegistryTests
         using var devices = new GraphicsDevices();
         using var context = devices.CreateContext();
         using var source = new SourceImage(context, Width, Height, Marker);
-        using var lease = OccluderRegistry.Acquire(context, 1);
+        using var lease = OccluderRegistry.Acquire(context, Guid.Empty, 1);
         var slot = lease.Group.Claim()!;
         slot.Dispose();
         var snapshot = new Occluder[VolumetricLightSettings.OccluderCapacity];
 
-        slot.Publish(source.Bitmap, Sample());
-        lease.Group.Snapshot(snapshot);
+        slot.Publish(source.Bitmap, Sample(), 0);
+        lease.Group.Snapshot(snapshot, 0);
 
         Assert.All(snapshot, occluder => Assert.Equal(0f, occluder.Strength));
     }
@@ -149,12 +189,12 @@ public sealed class OccluderRegistryTests
         using var devices = new GraphicsDevices();
         using var context = devices.CreateContext();
         using var source = new SourceImage(context, Width, Height, Marker);
-        using var lease = OccluderRegistry.Acquire(context, 1);
+        using var lease = OccluderRegistry.Acquire(context, Guid.Empty, 1);
         var slot = lease.Group.Claim()!;
         var relay = lease.Group.GetOutput(0);
 
         var empty = context.DeviceContext.GetImageLocalBounds(relay);
-        slot.Publish(source.Bitmap, Sample());
+        slot.Publish(source.Bitmap, Sample(), 0);
         var shown = Render(context, relay);
         slot.Dispose();
         var gone = context.DeviceContext.GetImageLocalBounds(relay);
@@ -172,10 +212,10 @@ public sealed class OccluderRegistryTests
         using var reader = devices.CreateContext();
         using var writer = devices.CreateContext();
         using var source = new SourceImage(writer, Width, Height, Marker);
-        using var lease = OccluderRegistry.Acquire(reader, 1);
+        using var lease = OccluderRegistry.Acquire(reader, Guid.Empty, 1);
         using var slot = lease.Group.Claim()!;
 
-        slot.Publish(source.Bitmap, Sample());
+        slot.Publish(source.Bitmap, Sample(), 0);
         var shown = Render(reader, lease.Group.GetOutput(0));
 
         Assert.Equal(source[3, 2], shown[3, 2]);
@@ -188,11 +228,11 @@ public sealed class OccluderRegistryTests
         using var reader = devices.CreateContext();
         var creator = devices.CreateContext();
         using var source = new SourceImage(reader, Width, Height, Marker);
-        using var lease = OccluderRegistry.Acquire(creator, 1);
+        using var lease = OccluderRegistry.Acquire(creator, Guid.Empty, 1);
         using var slot = lease.Group.Claim()!;
         creator.Dispose();
 
-        slot.Publish(source.Bitmap, Sample());
+        slot.Publish(source.Bitmap, Sample(), 0);
         var shown = Render(reader, lease.Group.GetOutput(0));
 
         Assert.Equal(source[5, 1], shown[5, 1]);
@@ -204,7 +244,7 @@ public sealed class OccluderRegistryTests
         using var devices = new GraphicsDevices();
         using var context = devices.CreateContext();
         using var source = new SourceImage(context, Width, Height, Marker);
-        using var lease = OccluderRegistry.Acquire(context, 1);
+        using var lease = OccluderRegistry.Acquire(context, Guid.Empty, 1);
         var claimed = 0;
 
         Parallel.For(0, 64, index =>
@@ -214,10 +254,10 @@ public sealed class OccluderRegistryTests
                 return;
 
             Interlocked.Increment(ref claimed);
-            slot.Publish(source.Bitmap, Sample((index + 1) / 100f));
+            slot.Publish(source.Bitmap, Sample((index + 1) / 100f), 0);
         });
         var snapshot = new Occluder[VolumetricLightSettings.OccluderCapacity];
-        lease.Group.Snapshot(snapshot);
+        lease.Group.Snapshot(snapshot, 0);
 
         Assert.Equal(VolumetricLightSettings.OccluderCapacity, claimed);
         Assert.All(snapshot, occluder => Assert.True(occluder.Strength > 0f));
@@ -229,7 +269,7 @@ public sealed class OccluderRegistryTests
         using var devices = new GraphicsDevices();
         using var context = devices.CreateContext();
         using var source = new SourceImage(context, Width, Height, Marker);
-        using var lease = OccluderRegistry.Acquire(context, 1);
+        using var lease = OccluderRegistry.Acquire(context, Guid.Empty, 1);
         using var slot = lease.Group.Claim()!;
         using var blur = new Vortice.Direct2D1.Effects.GaussianBlur(context.DeviceContext);
         blur.SetInput(0, source.Bitmap, true);
@@ -241,12 +281,12 @@ public sealed class OccluderRegistryTests
         var freed = new Occluder[VolumetricLightSettings.OccluderCapacity];
 
         lease.Group.AddConsumer(blur.NativePointer);
-        slot.Publish(image, Sample());
-        lease.Group.Snapshot(blocked);
+        slot.Publish(image, Sample(), 0);
+        lease.Group.Snapshot(blocked, 0);
         var kept = context.DeviceContext.GetImageLocalBounds(lease.Group.GetOutput(0));
         lease.Group.RemoveConsumer(blur.NativePointer);
-        slot.Publish(image, Sample());
-        lease.Group.Snapshot(freed);
+        slot.Publish(image, Sample(), 0);
+        lease.Group.Snapshot(freed, 0);
         var relayed = context.DeviceContext.GetImageLocalBounds(lease.Group.GetOutput(0));
 
         Assert.Equal(0f, blocked[0].Strength);
@@ -261,18 +301,18 @@ public sealed class OccluderRegistryTests
         using var devices = new GraphicsDevices();
         using var context = devices.CreateContext();
         using var source = new SourceImage(context, Width, Height, Marker);
-        using var lease = OccluderRegistry.Acquire(context, 1);
+        using var lease = OccluderRegistry.Acquire(context, Guid.Empty, 1);
         using var slot = lease.Group.Claim()!;
         using var blur = new Vortice.Direct2D1.Effects.GaussianBlur(context.DeviceContext);
         blur.SetInput(0, source.Bitmap, true);
         using var image = blur.Output;
         var snapshot = new Occluder[VolumetricLightSettings.OccluderCapacity];
-        slot.Publish(image, Sample());
-        lease.Group.Snapshot(snapshot);
+        slot.Publish(image, Sample(), 0);
+        lease.Group.Snapshot(snapshot, 0);
         Assert.Equal(1f, snapshot[0].Strength);
 
         lease.Group.AddConsumer(blur.NativePointer);
-        lease.Group.Snapshot(snapshot);
+        lease.Group.Snapshot(snapshot, 0);
 
         Assert.Equal(0f, snapshot[0].Strength);
         Assert.Equal((0f, 0f, 0f, 0f), (context.DeviceContext.GetImageLocalBounds(lease.Group.GetOutput(0)) is var bounds ? (bounds.Left, bounds.Top, bounds.Right, bounds.Bottom) : default));
@@ -283,8 +323,8 @@ public sealed class OccluderRegistryTests
     {
         using var devices = new GraphicsDevices();
         using var context = devices.CreateContext();
-        using var lease = OccluderRegistry.Acquire(context, 1);
-        var link = new OccluderLink { Group = lease.Group };
+        using var lease = OccluderRegistry.Acquire(context, Guid.Empty, 1);
+        var link = new OccluderLink { Group = lease.Group, Frame = 0 };
 
         var id = OccluderLinks.Register(link);
 

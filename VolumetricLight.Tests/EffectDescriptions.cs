@@ -19,7 +19,7 @@ internal static class EffectDescriptions
 
     public static EffectDescription At(int frame, int length, DrawDescription draw) => At(frame, length, draw, ScreenSize);
 
-    public static EffectDescription At(int frame, int length, DrawDescription draw, Size screenSize)
+    public static EffectDescription At(int frame, int length, DrawDescription draw, Size screenSize, Guid scene = default)
     {
         var timeline = new TimelineSourceDescription(
             screenSize,
@@ -27,7 +27,7 @@ internal static class EffectDescriptions
             new FrameTime(length, Fps),
             Fps,
             TimelineSourceUsage.Playing,
-            Guid.Empty,
+            scene,
             []);
         var item = new TimelineItemSourceDescription(timeline, frame, length, 0);
         return new EffectDescription(item, draw, 0, 1, 0, 1);

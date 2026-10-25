@@ -12,6 +12,7 @@ internal sealed class VolumetricLightOccluderEffectProcessor(IGraphicsDevicesAnd
     private OccluderLease? _lease;
     private OccluderSlot? _slot;
     private int _channel;
+    private Guid _scene;
 
     public override DrawDescription Update(EffectDescription effectDescription)
     {
@@ -34,11 +35,13 @@ internal sealed class VolumetricLightOccluderEffectProcessor(IGraphicsDevicesAnd
 
         var draw = effectDescription.DrawDescription;
         var channel = Math.Clamp(_item.Channel, 1, VolumetricLightSettings.MaximumOcclusionChannel);
-        if (_lease is null || _channel != channel)
+        var scene = effectDescription.SceneId;
+        if (_lease is null || _channel != channel || _scene != scene)
         {
             Release();
-            _lease = OccluderRegistry.Acquire(_devices, channel);
+            _lease = OccluderRegistry.Acquire(_devices, scene, channel);
             _channel = channel;
+            _scene = scene;
         }
 
         _slot ??= _lease.Group.Claim();
@@ -51,7 +54,7 @@ internal sealed class VolumetricLightOccluderEffectProcessor(IGraphicsDevicesAnd
         var occluder = draw.Zoom.X != 0f && draw.Zoom.Y != 0f && ViewTransform.TryCreate(draw, out var view)
             ? new Occluder(view, GoboMapping.Create(draw.Zoom, draw.Invert, draw.CenterPoint), strength)
             : default;
-        _slot.Publish(input, occluder);
+        _slot.Publish(input, occluder, effectDescription.TimelinePosition.Frame);
     }
 
     private void Release()
