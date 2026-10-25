@@ -6,4 +6,5 @@
     <BuildType Solution="*|*" Project="Release" />
     <Platform Solution="*|*" Project="Win32" />
   </Project>
+  <Project Path="YukkuriMovieMaker.Generator/YukkuriMovieMaker.Generator/YukkuriMovieMaker.Generator.csproj" />
 </Solution>
