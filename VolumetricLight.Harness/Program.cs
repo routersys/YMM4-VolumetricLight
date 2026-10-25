@@ -6,8 +6,8 @@ using SharpGen.Runtime;
 
 const int CanvasWidth = 1280;
 const int CanvasHeight = 720;
-const int ImageWidth = 640;
-const int ImageHeight = 480;
+const int ImageWidth = 960;
+const int ImageHeight = 540;
 const int FullHdWidth = 1920;
 const int FullHdHeight = 1080;
 
@@ -35,12 +35,12 @@ try
     {
         if (arguments.Input is { } benchmarkInput)
         {
-            Benchmark(HarnessImage.Load(benchmarkInput));
+            Benchmark(HarnessImage.Load(benchmarkInput), arguments.Case);
         }
         else
         {
-            Benchmark(HarnessImage.Synthetic(CanvasWidth, CanvasHeight));
-            Benchmark(HarnessImage.Synthetic(FullHdWidth, FullHdHeight));
+            Benchmark(HarnessImage.Synthetic(CanvasWidth, CanvasHeight), arguments.Case);
+            Benchmark(HarnessImage.Synthetic(FullHdWidth, FullHdHeight), arguments.Case);
         }
 
         return 0;
@@ -53,7 +53,7 @@ try
         HarnessMode.Golden => WriteGolden(renderer, image),
         HarnessMode.Verify => Verify(renderer, image),
         HarnessMode.Transition => Transition(renderer, outputDirectory),
-        _ => Render(renderer, outputDirectory),
+        _ => Render(renderer, outputDirectory, arguments.Case),
     };
 }
 catch (Exception exception) when (exception is HarnessException or SharpGenException)
@@ -62,21 +62,21 @@ catch (Exception exception) when (exception is HarnessException or SharpGenExcep
     return 2;
 }
 
-static int Render(HarnessRenderer renderer, string outputDirectory)
+static int Render(HarnessRenderer renderer, string outputDirectory, string? caseFilter)
 {
     Directory.CreateDirectory(outputDirectory);
     var failures = 0;
-    var cases = Evaluate(renderer, (golden, files, frames) =>
+    var cases = Evaluate(renderer, caseFilter, (golden, files, frames) =>
     {
         Console.WriteLine($"{golden.Name}: {golden.Hash}");
         for (var index = 0; index < files.Length; index++)
         {
             HarnessImage.Save(Path.Combine(outputDirectory, files[index]), frames[index], renderer.CanvasWidth, renderer.CanvasHeight);
-            var opaque = CountOpaque(frames[index]);
-            Console.WriteLine($"  {files[index]} opaque={opaque}");
-            if (opaque == 0)
+            var lit = CountLit(frames[index]);
+            Console.WriteLine($"  {files[index]} lit={lit}");
+            if (lit == 0)
             {
-                Console.Error.WriteLine($"{files[index]}: 出力が完全に透明です。");
+                Console.Error.WriteLine($"{files[index]}: 出力が真っ黒です。");
                 failures++;
             }
         }
@@ -87,7 +87,7 @@ static int Render(HarnessRenderer renderer, string outputDirectory)
 
 static int WriteGolden(HarnessRenderer renderer, HarnessImage image)
 {
-    var cases = Evaluate(renderer, null);
+    var cases = Evaluate(renderer, null, null);
     if (CountDuplicates(cases) != 0)
         return 1;
     if (cases.Count == 0)
@@ -118,7 +118,7 @@ static int Verify(HarnessRenderer renderer, HarnessImage image)
         Console.Error.WriteLine($"基準値は {golden.Adapter} (driver {golden.Driver}) で書かれています。今回は {renderer.Adapter} (driver {renderer.Driver}) です。画素の差はこの違いから来ることがあります。");
 
     var failures = 0;
-    var current = Evaluate(renderer, null).ToDictionary(item => item.Name, StringComparer.Ordinal);
+    var current = Evaluate(renderer, null, null).ToDictionary(item => item.Name, StringComparer.Ordinal);
     if (golden.Cases.Count == 0 && current.Count == 0)
         Console.Error.WriteLine("ケースがありません。HarnessCases に書き足してください。");
     foreach (var (name, frames, hash) in golden.Cases)
@@ -156,9 +156,9 @@ static int Verify(HarnessRenderer renderer, HarnessImage image)
 static int Transition(HarnessRenderer renderer, string outputDirectory)
 {
     var failures = 0;
-    foreach (var (name, create, change, frame) in HarnessCases.Transitions())
+    foreach (var (name, create, change, frame, pose) in HarnessCases.Transitions())
     {
-        var (direct, transitioned) = renderer.RenderTransition(create, change, frame);
+        var (direct, transitioned) = renderer.RenderTransition(create, change, frame, pose);
         var difference = ImageComparison.Of(direct, transitioned, renderer.CanvasWidth, renderer.CanvasHeight);
         if (difference.IsEmpty)
         {
@@ -176,15 +176,15 @@ static int Transition(HarnessRenderer renderer, string outputDirectory)
     if (!HarnessCases.Transitions().Any() && !HarnessCases.All().Any(item => item.Frames.Count > 1))
         Console.Error.WriteLine("ケースがありません。HarnessCases に書き足してください。");
 
-    foreach (var (name, effect, frames) in HarnessCases.All())
+    foreach (var (name, effect, frames, pose) in HarnessCases.All())
     {
         if (frames.Count < 2)
             continue;
 
-        var sequential = renderer.Render(effect, frames);
+        var sequential = renderer.Render(effect, frames, pose);
         for (var index = 0; index < frames.Count; index++)
         {
-            var fresh = renderer.Render(effect, [frames[index]])[0];
+            var fresh = renderer.Render(effect, [frames[index]], pose)[0];
             var difference = ImageComparison.Of(fresh, sequential[index], renderer.CanvasWidth, renderer.CanvasHeight);
             var label = $"{name}-f{frames[index]:D3}";
             if (difference.IsEmpty)
@@ -248,37 +248,42 @@ static int Compare(string beforeDirectory, string afterDirectory)
     return failures == 0 ? 0 : 1;
 }
 
-static void Benchmark(HarnessImage image)
+static void Benchmark(HarnessImage image, string? caseFilter)
 {
-    const int Frames = 60;
+    const int Frames = 12;
 
     using var renderer = new HarnessRenderer(image.Width, image.Height, image);
     Console.WriteLine($"adapter: {renderer.Adapter} (driver {renderer.Driver})");
-    foreach (var (name, effect) in HarnessCases.Benchmarks())
+    foreach (var (name, effect, pose) in HarnessCases.Benchmarks())
     {
-        Report(image, name, "still", renderer.Measure(effect, Frames, moving: false));
-        Report(image, name, "moving", renderer.Measure(effect, Frames, moving: true));
+        if (caseFilter is not null && !name.Contains(caseFilter, StringComparison.Ordinal))
+            continue;
+
+        Report(image, name, "still", renderer.Measure(effect, Frames, moving: false, pose));
+        Report(image, name, "moving", renderer.Measure(effect, Frames, moving: true, pose));
     }
 }
 
 static void Report(HarnessImage image, string name, string motion, HarnessRenderer.Measurement measurement)
     => Console.WriteLine(
-        $"{image.Width}x{image.Height} {name,-15} {motion,-6} " +
+        $"{image.Width}x{image.Height} {name,-22} {motion,-6} " +
         $"gpu={(measurement.Gpu is { } gpu ? gpu.TotalMilliseconds.ToString("F3") : "n/a"),7} " +
         $"cpu={measurement.Cpu.TotalMilliseconds,7:F3} " +
         $"update={measurement.Update.TotalMilliseconds,6:F3} " +
         $"alloc={measurement.Allocated,6} gen0={measurement.Gen0}");
 
-static List<GoldenCase> Evaluate(HarnessRenderer renderer, Action<GoldenCase, string[], byte[][]>? report)
+static List<GoldenCase> Evaluate(HarnessRenderer renderer, string? caseFilter, Action<GoldenCase, string[], byte[][]>? report)
 {
     var cases = new List<GoldenCase>();
     var names = new HashSet<string>(StringComparer.Ordinal);
-    foreach (var (name, effect, frames) in HarnessCases.All())
+    foreach (var (name, effect, frames, pose) in HarnessCases.All())
     {
         if (!names.Add(name))
             throw new HarnessException($"ケース名が重複しています。{name}");
+        if (caseFilter is not null && !name.Contains(caseFilter, StringComparison.Ordinal))
+            continue;
 
-        var rendered = renderer.Render(effect, frames);
+        var rendered = renderer.Render(effect, frames, pose);
         var files = new string[frames.Count];
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         for (var index = 0; index < frames.Count; index++)
@@ -315,12 +320,12 @@ static int CountDuplicates(IReadOnlyList<GoldenCase> cases)
     return duplicates;
 }
 
-static int CountOpaque(byte[] pixels)
+static int CountLit(byte[] pixels)
 {
     var count = 0;
-    for (var offset = HarnessImage.BytesPerPixel - 1; offset < pixels.Length; offset += HarnessImage.BytesPerPixel)
+    for (var offset = 0; offset < pixels.Length; offset += HarnessImage.BytesPerPixel)
     {
-        if (pixels[offset] != 0)
+        if (pixels[offset] != 0 || pixels[offset + 1] != 0 || pixels[offset + 2] != 0)
             count++;
     }
 

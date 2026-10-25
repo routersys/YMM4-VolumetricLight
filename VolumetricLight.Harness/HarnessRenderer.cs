@@ -16,9 +16,11 @@ internal sealed class HarnessRenderer : IDisposable
 {
     const int Fps = 30;
     const int Length = 300;
-    const int WarmupUpdates = 2000;
-    const int UpdateRepeats = 20;
+    const int WarmupUpdates = 100;
+    const int UpdateRepeats = 5;
     const float Dpi = 96f;
+
+    static readonly Color4 Backdrop = new(0f, 0f, 0f, 1f);
 
     static readonly PixelFormat PixelFormat = new(Format.B8G8R8A8_UNorm, Vortice.DCommon.AlphaMode.Premultiplied);
 
@@ -67,7 +69,7 @@ internal sealed class HarnessRenderer : IDisposable
 
     public string Driver { get; }
 
-    public byte[][] Render(IVideoEffect effect, IReadOnlyList<int> frames)
+    public byte[][] Render(IVideoEffect effect, IReadOnlyList<int> frames, HarnessPose? pose = null)
     {
         if (frames.Count == 0)
             throw new ArgumentException("フレームを 1 つ以上指定してください。", nameof(frames));
@@ -79,7 +81,7 @@ internal sealed class HarnessRenderer : IDisposable
             var rendered = new byte[frames.Count][];
             for (var index = 0; index < frames.Count; index++)
             {
-                processor.Update(Describe(frames[index]));
+                processor.Update(Describe(frames[index], pose));
                 rendered[index] = Capture(processor.Output);
             }
 
@@ -91,22 +93,22 @@ internal sealed class HarnessRenderer : IDisposable
         }
     }
 
-    public (byte[] Direct, byte[] Transitioned) RenderTransition<TEffect>(Func<TEffect> create, Action<TEffect> change, int frame)
+    public (byte[] Direct, byte[] Transitioned) RenderTransition<TEffect>(Func<TEffect> create, Action<TEffect> change, int frame, HarnessPose? pose = null)
         where TEffect : IVideoEffect
     {
         var settled = create();
         change(settled);
-        var direct = Render(settled, [frame])[0];
+        var direct = Render(settled, [frame], pose)[0];
 
         var live = create();
         using var processor = live.CreateVideoEffect(context);
         processor.SetInput(centered);
         try
         {
-            processor.Update(Describe(frame));
+            processor.Update(Describe(frame, pose));
             _ = Capture(processor.Output);
             change(live);
-            processor.Update(Describe(frame));
+            processor.Update(Describe(frame, pose));
             return (direct, Capture(processor.Output));
         }
         finally
@@ -115,11 +117,11 @@ internal sealed class HarnessRenderer : IDisposable
         }
     }
 
-    public Measurement Measure(IVideoEffect effect, int frames, bool moving)
+    public Measurement Measure(IVideoEffect effect, int frames, bool moving, HarnessPose? pose = null)
     {
         var descriptions = new EffectDescription[frames];
         for (var frame = 0; frame < frames; frame++)
-            descriptions[frame] = Describe(moving ? frame : 0);
+            descriptions[frame] = Describe(moving ? frame : 0, pose);
 
         using var processor = effect.CreateVideoEffect(context);
         processor.SetInput(centered);
@@ -208,7 +210,7 @@ internal sealed class HarnessRenderer : IDisposable
         var deviceContext = context.DeviceContext;
         deviceContext.Target = target;
         deviceContext.BeginDraw();
-        deviceContext.Clear(new Color4(0f, 0f, 0f, 0f));
+        deviceContext.Clear(Backdrop);
         deviceContext.DrawImage(output, new Vector2(CanvasWidth * 0.5f, CanvasHeight * 0.5f), null, InterpolationMode.NearestNeighbor, CompositeMode.SourceOver);
         deviceContext.EndDraw();
         deviceContext.Target = null;
@@ -221,7 +223,7 @@ internal sealed class HarnessRenderer : IDisposable
         sync.Unmap();
     }
 
-    EffectDescription Describe(int frame)
+    EffectDescription Describe(int frame, HarnessPose? pose)
     {
         var timeline = new TimelineSourceDescription(
             new System.Drawing.Size(CanvasWidth, CanvasHeight),
@@ -232,7 +234,11 @@ internal sealed class HarnessRenderer : IDisposable
             Guid.Empty,
             []);
         var item = new TimelineItemSourceDescription(timeline, frame, Length, 0);
-        var draw = new DrawDescription(Vector3.Zero, Vector2.Zero, Vector2.One, Vector3.Zero, Matrix4x4.Identity, InterpolationMode.Linear, 1d, false, []);
+        var placement = pose ?? HarnessPose.Flat;
+        var draw = new DrawDescription(placement.Draw, Vector2.Zero, placement.Zoom, placement.Rotation, placement.Camera, InterpolationMode.Linear, 1d, placement.Invert, [])
+        {
+            PerspectiveDistance = placement.PerspectiveDistance,
+        };
         return new EffectDescription(item, draw, 0, 1, 0, 1);
     }
 

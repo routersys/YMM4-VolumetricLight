@@ -12,22 +12,23 @@ internal enum HarnessMode
     Benchmark,
 }
 
-internal sealed record HarnessArguments(HarnessMode Mode, string? Input, string? OutputDirectory, string? Before, string? After)
+internal sealed record HarnessArguments(HarnessMode Mode, string? Input, string? OutputDirectory, string? Before, string? After, string? Case = null)
 {
     public const string Usage = """
         使い方:
-          [<出力先>] [--input <画像>]                ケースを描き、PNG とハッシュを出します
+          [<出力先>] [--input <画像>] [--case <名前>]  ケースを描き、PNG とハッシュを出します。--case は名前に含まれるケースだけを描きます
           --golden [--input <画像>]                  基準値を golden.json に書きます
           --verify [--input <画像>]                  基準値と照合します
           --transition [<出力先>] [--input <画像>]   設定を変えた後とフレームを進めた後の描画を、作り直した描画と照合します
           --compare <前> <後>                        2 つの出力先の PNG を画素ごとに比べます
-          --benchmark [--input <画像>]               描画を計測します
+          --benchmark [--input <画像>] [--case <名前>]  描画を計測します
         """;
 
     public static HarnessArguments Parse(string[] arguments)
     {
         HarnessMode? mode = null;
         string? input = null;
+        string? caseFilter = null;
         var positionals = new List<string>();
         for (var index = 0; index < arguments.Length; index++)
         {
@@ -48,6 +49,11 @@ internal sealed record HarnessArguments(HarnessMode Mode, string? Input, string?
                     break;
                 case "--benchmark":
                     mode = Select(mode, HarnessMode.Benchmark);
+                    break;
+                case "--case":
+                    if (index + 1 >= arguments.Length)
+                        throw new HarnessException("--case には名前を続けてください。");
+                    caseFilter = arguments[++index];
                     break;
                 case "--input":
                     if (index + 1 >= arguments.Length)
@@ -75,10 +81,16 @@ internal sealed record HarnessArguments(HarnessMode Mode, string? Input, string?
             case HarnessMode.Transition:
                 if (positionals.Count > 1)
                     throw new HarnessException($"余分な引数です。{positionals[1]}");
-                return new HarnessArguments(selected, input, positionals.FirstOrDefault(), null, null);
+                return new HarnessArguments(selected, input, positionals.FirstOrDefault(), null, null, caseFilter);
+            case HarnessMode.Benchmark:
+                if (positionals.Count > 0)
+                    throw new HarnessException($"余分な引数です。{positionals[0]}");
+                return new HarnessArguments(selected, input, null, null, null, caseFilter);
             default:
                 if (positionals.Count > 0)
                     throw new HarnessException($"余分な引数です。{positionals[0]}");
+                if (caseFilter is not null)
+                    throw new HarnessException("--case は、ケースを描く場合と --benchmark でだけ使えます。");
                 return new HarnessArguments(selected, input, null, null, null);
         }
     }
