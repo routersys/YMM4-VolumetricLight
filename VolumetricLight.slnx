@@ -10,6 +10,7 @@
     <BuildDependency Project="VolumetricLight.Shader/VolumetricLight.Shader.vcxproj" />
   </Project>
   <Project Path="VolumetricLight.Tests/VolumetricLight.Tests.csproj" />
+  <Project Path="VolumetricLight.Harness/VolumetricLight.Harness.csproj" />
   <Project Path="VolumetricLight.Shader/VolumetricLight.Shader.vcxproj">
     <BuildType Solution="*|*" Project="Release" />
     <Platform Solution="*|*" Project="Win32" />
