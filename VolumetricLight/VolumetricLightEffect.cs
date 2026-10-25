@@ -103,6 +103,16 @@ public sealed class VolumetricLightEffect : VideoEffectBase
     public VolumetricLightQuality Quality { get => _quality; set => Set(ref _quality, value); }
     private VolumetricLightQuality _quality = VolumetricLightQuality.Standard;
 
+    [Display(GroupName = nameof(Texts.OcclusionGroup), Name = nameof(Texts.OcclusionChannel), Description = nameof(Texts.OcclusionChannelDescription), Order = 50, ResourceType = typeof(Texts))]
+    [TextBoxSlider("F0", "", 0, VolumetricLightSettings.MaximumOcclusionChannel)]
+    [Range(0, VolumetricLightSettings.MaximumOcclusionChannel)]
+    public int OcclusionChannel
+    {
+        get => _occlusionChannel;
+        set => Set(ref _occlusionChannel, Math.Clamp(value, 0, VolumetricLightSettings.MaximumOcclusionChannel));
+    }
+    private int _occlusionChannel;
+
     private IAnimatable[]? _animatables;
 
     public override IEnumerable<string> CreateExoVideoFilters(int keyFrameIndex, ExoOutputDescription exoOutputDescription) => [];

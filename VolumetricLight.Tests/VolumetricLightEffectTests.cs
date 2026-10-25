@@ -78,6 +78,21 @@ public sealed class VolumetricLightEffectTests
         Assert.Equal(VolumetricLightQuality.Standard, effect.Quality);
         Assert.Equal(Colors.White, effect.Tint);
         Assert.Equal(0, effect.Seed);
+        Assert.Equal(0, effect.OcclusionChannel);
+    }
+
+    [Theory]
+    [InlineData(-3, 0)]
+    [InlineData(0, 0)]
+    [InlineData(5, 5)]
+    [InlineData(99, VolumetricLightSettings.MaximumOcclusionChannel)]
+    public void TheOcclusionChannelIsClampedToItsRange(int value, int expected)
+    {
+        var effect = new VolumetricLightEffect { OcclusionChannel = 4 };
+
+        effect.OcclusionChannel = value;
+
+        Assert.Equal(expected, effect.OcclusionChannel);
     }
 
     [Theory]
@@ -175,6 +190,7 @@ public sealed class VolumetricLightEffectTests
     [InlineData(nameof(VolumetricLightEffect.DustSpeed), nameof(Texts.DustGroup), nameof(Texts.DustSpeed), nameof(Texts.DustSpeedDescription), 32)]
     [InlineData(nameof(VolumetricLightEffect.DustDirection), nameof(Texts.DustGroup), nameof(Texts.DustDirection), nameof(Texts.DustDirectionDescription), 33)]
     [InlineData(nameof(VolumetricLightEffect.Seed), nameof(Texts.DustGroup), nameof(Texts.Seed), nameof(Texts.SeedDescription), 34)]
+    [InlineData(nameof(VolumetricLightEffect.OcclusionChannel), nameof(Texts.OcclusionGroup), nameof(Texts.OcclusionChannel), nameof(Texts.OcclusionChannelDescription), 50)]
     [InlineData(nameof(VolumetricLightEffect.ShowSource), nameof(Texts.OutputGroup), nameof(Texts.ShowSource), nameof(Texts.ShowSourceDescription), 40)]
     [InlineData(nameof(VolumetricLightEffect.Quality), nameof(Texts.OutputGroup), nameof(Texts.Quality), nameof(Texts.QualityDescription), 41)]
     public void EveryParameterIsDisplayedInItsGroupInOrder(string property, string group, string name, string description, int order)
@@ -197,7 +213,7 @@ public sealed class VolumetricLightEffectTests
             .Select(display => display.Order)
             .ToArray();
 
-        Assert.Equal(17, orders.Length);
+        Assert.Equal(18, orders.Length);
         Assert.Equal(orders.Length, orders.Distinct().Count());
     }
 
@@ -232,6 +248,7 @@ public sealed class VolumetricLightEffectTests
         Assert.NotNull(Attribute<EnumComboBoxAttribute>(nameof(VolumetricLightEffect.Quality)));
         Assert.NotNull(Attribute<ColorPickerAttribute>(nameof(VolumetricLightEffect.Tint)));
         Assert.NotNull(Attribute<ToggleSliderAttribute>(nameof(VolumetricLightEffect.ShowSource)));
+        Assert.NotNull(Attribute<TextBoxSliderAttribute>(nameof(VolumetricLightEffect.OcclusionChannel)));
     }
 
     [Fact]
@@ -242,6 +259,7 @@ public sealed class VolumetricLightEffectTests
             Tint = Color.FromRgb(255, 140, 40),
             ShowSource = false,
             Seed = -321,
+            OcclusionChannel = 4,
             Quality = VolumetricLightQuality.Ultra,
         };
         var values = new[] { 135d, 40d, -22.5d, 800d, 180d, 20d, 45d, 4d, -35d, 65d, 310d, -120d, 15d };
@@ -254,6 +272,7 @@ public sealed class VolumetricLightEffectTests
         Assert.Equal(Color.FromRgb(255, 140, 40), clone.Tint);
         Assert.False(clone.ShowSource);
         Assert.Equal(-321, clone.Seed);
+        Assert.Equal(4, clone.OcclusionChannel);
         Assert.Equal(VolumetricLightQuality.Ultra, clone.Quality);
         Assert.Equal(values, Animations(clone).Select(animation => animation.GetValue(0, 1, EffectDescriptions.Fps)));
     }

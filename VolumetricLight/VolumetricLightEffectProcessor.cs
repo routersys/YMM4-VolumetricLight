@@ -50,6 +50,11 @@ internal sealed class VolumetricLightEffectProcessor(IGraphicsDevicesAndContext 
     private ShaftConstants _constants;
     private ZoomState _zoomState;
     private bool _hasZoomState;
+    private readonly OccluderLink _link = new();
+    private int _linkId;
+    private OccluderLease? _lease;
+    private int _occlusionChannel = -1;
+    private int _revision;
 
     public override DrawDescription Update(EffectDescription effectDescription)
     {
@@ -95,6 +100,7 @@ internal sealed class VolumetricLightEffectProcessor(IGraphicsDevicesAndContext 
         {
             SetScale(scene.Scale);
             Apply(scene.Constants);
+            SetOcclusion(Math.Clamp(_item.OcclusionChannel, 0, VolumetricLightSettings.MaximumOcclusionChannel));
             SetShaft(ShaftState.Shaft);
         }
 
@@ -207,6 +213,34 @@ internal sealed class VolumetricLightEffectProcessor(IGraphicsDevicesAndContext 
         _constants = next;
     }
 
+    private void SetOcclusion(int channel)
+    {
+        if (_occlusionChannel != channel)
+        {
+            ReleaseOcclusion();
+            _lease = channel > 0 ? OccluderRegistry.Acquire(_devices, channel) : null;
+            _lease?.Group.AddConsumer(_shaft!.NativePointer);
+            for (var slot = 0; slot < VolumetricLightSettings.OccluderCapacity; slot++)
+                _shaft!.SetInput(VolumetricLightSettings.GoboLevelCount + slot, _lease?.Group.GetOutput(slot) ?? _emptyOutput, true);
+
+            _link.Group = _lease?.Group;
+            _occlusionChannel = channel;
+        }
+
+        if (_lease?.Group.IsOccupied == true)
+            _shaft!.Revision = unchecked(++_revision);
+    }
+
+    private void ReleaseOcclusion()
+    {
+        _link.Group = null;
+        if (_shaft is { } shaft)
+            _lease?.Group.RemoveConsumer(shaft.NativePointer);
+        _lease?.Dispose();
+        _lease = null;
+        _occlusionChannel = -1;
+    }
+
     protected override ID2D1Image? CreateEffect(IGraphicsDevicesAndContext devices)
     {
         var emission = new EmissionCustomEffect(devices);
@@ -222,6 +256,8 @@ internal sealed class VolumetricLightEffectProcessor(IGraphicsDevicesAndContext 
         _shaft = shaft;
         disposer.Collect(emission);
         disposer.Collect(shaft);
+        _linkId = OccluderLinks.Register(_link);
+        shaft.Link = _linkId;
 
         var context = devices.DeviceContext;
         var flood = new Flood(context) { Color = Vector4.Zero };
@@ -327,6 +363,8 @@ internal sealed class VolumetricLightEffectProcessor(IGraphicsDevicesAndContext 
             _composite?.SetInput(0, null, true);
             _composite?.SetInput(1, null, true);
             _clip?.SetInput(0, null, true);
+            ReleaseOcclusion();
+            OccluderLinks.Unregister(_linkId);
             _isFirst = true;
             _hasZoomState = false;
             _sourceState = SourceState.None;
